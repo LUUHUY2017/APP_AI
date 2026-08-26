@@ -34,6 +34,7 @@ public class DeviceActivationService
     {
         try
         {
+            var cleanMac = macAddress.Replace(":", "").Replace("-", "").ToLowerInvariant();
             var payload = new
             {
                 application = new
@@ -46,8 +47,11 @@ public class DeviceActivationService
                     type = SystemConstants.BoardType,
                     name = SystemConstants.AppName,
                     ip = "192.168.1.100",
-                    mac = macAddress
-                }
+                    mac = macAddress,
+                    serial_number = cleanMac
+                },
+                serial_number = cleanMac,
+                mac = macAddress
             };
 
             var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
@@ -55,7 +59,7 @@ public class DeviceActivationService
             {
                 Content = jsonContent
             };
-            request.Headers.Add("Device-Id", macAddress);
+            request.Headers.Add("Device-Id", cleanMac);
             request.Headers.Add("Client-Id", deviceId);
             request.Headers.Add("User-Agent", $"{SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}");
             request.Headers.Add("Accept-Language", "zh-CN");
