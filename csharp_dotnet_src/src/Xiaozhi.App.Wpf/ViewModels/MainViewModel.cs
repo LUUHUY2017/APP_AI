@@ -24,12 +24,13 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isListening = false;
     private CancellationTokenSource? _connectCts;
     private System.Timers.Timer? _ttsResetTimer;
+    private System.Timers.Timer? _requestTimeoutTimer;
 
     private bool _isConnected;
     private bool _isRecording;
     private bool _isSpeaking;
     private string _statusText = "✅ Sẵn sàng";
-    private string _currentChatMessage = "Bấm hoặc giữ 🎤 để nói, hoặc gõ tin nhắn bên dưới.";
+    private string _currentChatMessage = "Bấm nút 🎤 để nói chuyện với AI...";
 
     public bool IsConnected
     {
@@ -77,6 +78,20 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 IsSpeaking = false;
                 if (!IsRecording) StatusText = "✅ Sẵn sàng";
+            });
+        };
+
+        // Safety timeout for requests (reset UI if server doesn't respond in 8s)
+        _requestTimeoutTimer = new System.Timers.Timer(8000) { AutoReset = false };
+        _requestTimeoutTimer.Elapsed += (s, e) =>
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                if (CurrentChatMessage.StartsWith("⏳"))
+                {
+                    CurrentChatMessage = "💡 Hãy bấm nút 🎤 và nói bằng giọng nói để AI trả lời tốt nhất!";
+                    StatusText = "✅ Sẵn sàng";
+                }
             });
         };
     }
@@ -195,7 +210,6 @@ public class MainViewModel : INotifyPropertyChanged
                     Buffer.BlockCopy(pcmShorts, 0, pcmBytes, 0, pcmBytes.Length);
                     _audioService.PlayAudio(pcmBytes);
 
-                    // Reset auto timer on each incoming audio packet
                     _ttsResetTimer?.Stop();
                     _ttsResetTimer?.Start();
                 }
@@ -208,7 +222,17 @@ public class MainViewModel : INotifyPropertyChanged
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
-                StatusText = text;
+                _requestTimeoutTimer?.Stop();
+                if (text.StartsWith("[Thông báo]:"))
+                {
+                    // Server alert for long text detect
+                    CurrentChatMessage = "💡 Server Xiaozhi là AI thoại. Hãy bấm nút 🎤 để nói trực tiếp bằng giọng nói!";
+                    StatusText = "✅ Sẵn sàng";
+                }
+                else
+                {
+                    StatusText = text;
+                }
             });
             await Task.CompletedTask;
         };
@@ -217,6 +241,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
+                _requestTimeoutTimer?.Stop();
                 CurrentChatMessage = text;
                 MessageAdded?.Invoke(new ChatMessage
                 {
@@ -225,7 +250,6 @@ public class MainViewModel : INotifyPropertyChanged
                     Timestamp = DateTime.Now
                 });
 
-                // Auto reset speaking state 4 seconds after text response
                 _ttsResetTimer?.Stop();
                 _ttsResetTimer?.Start();
             });
@@ -236,6 +260,7 @@ public class MainViewModel : INotifyPropertyChanged
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
+                _requestTimeoutTimer?.Stop();
                 if (state == "start" || state == "sentence_start")
                 {
                     IsSpeaking = true;
@@ -271,6 +296,7 @@ public class MainViewModel : INotifyPropertyChanged
                 IsSpeaking = false;
                 _isListening = false;
                 IsConnected = false;
+                _requestTimeoutTimer?.Stop();
             });
             await Task.CompletedTask;
         };
@@ -284,7 +310,9 @@ public class MainViewModel : INotifyPropertyChanged
         IsRecording = true;
         IsSpeaking = false;
         StatusText = "🎤 Đang nghe...";
+        CurrentChatMessage = "🎤 Đang ghi âm giọng nói của bạn... Hãy nói câu hỏi.";
         _ttsResetTimer?.Stop();
+        _requestTimeoutTimer?.Stop();
 
         await _protocolClient!.StartListeningAsync(mode: "manual");
         _audioService.StartRecording();
@@ -297,7 +325,10 @@ public class MainViewModel : INotifyPropertyChanged
         _audioService.StopRecording();
         IsRecording = false;
         StatusText = "🧠 Đang xử lý...";
-        CurrentChatMessage = "⏳ Đang xử lý...";
+        CurrentChatMessage = "⏳ Đang gửi giọng nói lên AI...";
+
+        _requestTimeoutTimer?.Stop();
+        _requestTimeoutTimer?.Start();
 
         if (_protocolClient?.IsConnected == true)
             await _protocolClient.StopListeningAsync();
@@ -312,6 +343,9 @@ public class MainViewModel : INotifyPropertyChanged
         StatusText = "🧠 Đang xử lý...";
         CurrentChatMessage = "⏳ Đang gửi câu hỏi...";
 
+        _requestTimeoutTimer?.Stop();
+        _requestTimeoutTimer?.Start();
+
         await _protocolClient!.SendTextQueryAsync(text);
     }
 
@@ -319,6 +353,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _audioService.StopPlayback();
         _ttsResetTimer?.Stop();
+        _requestTimeoutTimer?.Stop();
         IsSpeaking = false;
         StatusText = "⛔ Đã dừng";
         if (_protocolClient?.IsConnected == true)
