@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
+using Xiaozhi.Core.Utils;
 using Xiaozhi.Protocols.Ota;
 
 namespace Xiaozhi.App.Maui;
@@ -20,10 +21,11 @@ public partial class SettingsPage : ContentPage
     {
         InitializeComponent();
 
-        WsUrlEntry.Text = Preferences.Default.Get("lily_ws_url", "wss://api.tenclass.net/xiaozhi/v1/");
-        TokenEntry.Text = Preferences.Default.Get("lily_token", "test-token");
-        DeviceIdEntry.Text = Preferences.Default.Get("lily_device_id", "a0:36:bc:2c:ed:40");
-        ClientIdEntry.Text = Preferences.Default.Get("lily_client_id", "maui-ios-client");
+        var config = ConfigManager.Instance.Config;
+        WsUrlEntry.Text = Preferences.Default.Get("lily_ws_url", config.SystemOptions.Network.WebSocketUrl);
+        TokenEntry.Text = Preferences.Default.Get("lily_token", config.SystemOptions.Network.WebSocketAccessToken);
+        DeviceIdEntry.Text = Preferences.Default.Get("lily_device_id", config.SystemOptions.DeviceId);
+        ClientIdEntry.Text = Preferences.Default.Get("lily_client_id", config.SystemOptions.ClientId);
 
         Unloaded += (s, e) => _cts?.Cancel();
     }
@@ -46,7 +48,7 @@ public partial class SettingsPage : ContentPage
             TokenEntry.Text = result.Token;
             OtpCodeLabel.Text = "ACTIVE";
             OtpStatusLabel.Text = "🎉 Thiết bị đã được kích hoạt thành công!";
-            Preferences.Default.Set("lily_token", result.Token);
+            SaveConfigToStorage(WsUrlEntry.Text, result.Token, macAddress, deviceId);
             return;
         }
 
@@ -68,7 +70,7 @@ public partial class SettingsPage : ContentPage
                     TokenEntry.Text = token;
                     OtpCodeLabel.Text = "SUCCESS";
                     OtpStatusLabel.Text = "🎉 Kích hoạt thành công! Token mới đã được tự động lưu.";
-                    Preferences.Default.Set("lily_token", token);
+                    SaveConfigToStorage(WsUrlEntry.Text, token, macAddress, deviceId);
                 });
             }
         }, _cts.Token);
@@ -95,13 +97,25 @@ public partial class SettingsPage : ContentPage
             return;
         }
 
-        Preferences.Default.Set("lily_ws_url", wsUrl);
-        Preferences.Default.Set("lily_token", token ?? "");
-        Preferences.Default.Set("lily_device_id", deviceId ?? "");
-        Preferences.Default.Set("lily_client_id", clientId ?? "");
+        SaveConfigToStorage(wsUrl, token ?? "", deviceId ?? "", clientId ?? "");
 
         SettingsSaved?.Invoke(this, EventArgs.Empty);
         await Navigation.PopModalAsync();
+    }
+
+    private void SaveConfigToStorage(string wsUrl, string token, string deviceId, string clientId)
+    {
+        Preferences.Default.Set("lily_ws_url", wsUrl);
+        Preferences.Default.Set("lily_token", token);
+        Preferences.Default.Set("lily_device_id", deviceId);
+        Preferences.Default.Set("lily_client_id", clientId);
+
+        var config = ConfigManager.Instance.Config;
+        config.SystemOptions.Network.WebSocketUrl = wsUrl;
+        config.SystemOptions.Network.WebSocketAccessToken = token;
+        config.SystemOptions.DeviceId = deviceId;
+        config.SystemOptions.ClientId = clientId;
+        ConfigManager.Instance.SaveConfig(config);
     }
 
     private async void OnResetClicked(object sender, EventArgs e)
@@ -118,6 +132,8 @@ public partial class SettingsPage : ContentPage
             Preferences.Default.Remove("lily_token");
             Preferences.Default.Remove("lily_device_id");
             Preferences.Default.Remove("lily_client_id");
+
+            SaveConfigToStorage(WsUrlEntry.Text, TokenEntry.Text, DeviceIdEntry.Text, ClientIdEntry.Text);
         }
     }
 }
