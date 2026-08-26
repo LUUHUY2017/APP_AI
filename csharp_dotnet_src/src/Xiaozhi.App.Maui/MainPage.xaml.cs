@@ -135,15 +135,20 @@ public partial class MainPage : ContentPage
 
     private async void OnSettingsClicked(object sender, EventArgs e)
     {
-        string newUrl = await DisplayPromptAsync("Cài đặt Server", "Nhập WebSocket URL:", initialValue: _wsUrl);
-        if (!string.IsNullOrWhiteSpace(newUrl))
+        var settingsPage = new SettingsPage();
+        settingsPage.SettingsSaved += async (s, args) =>
         {
-            _wsUrl = newUrl.Trim();
-            Preferences.Default.Set("lily_ws_url", _wsUrl);
-            _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, "maui-ios-client");
+            _wsUrl = Preferences.Default.Get("lily_ws_url", _wsUrl);
+            _token = Preferences.Default.Get("lily_token", _token);
+            _deviceId = Preferences.Default.Get("lily_device_id", _deviceId);
+            var clientId = Preferences.Default.Get("lily_client_id", "maui-ios-client");
+
+            _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
             SetupClientHandlers();
             await ConnectWithOtaAsync();
-        }
+        };
+
+        await Navigation.PushModalAsync(settingsPage);
     }
 
     private async void OnSendClicked(object sender, EventArgs e)

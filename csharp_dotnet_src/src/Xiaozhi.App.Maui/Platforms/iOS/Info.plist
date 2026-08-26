@@ -31,5 +31,7 @@
 	<string>Ứng dụng Lily AI cần quyền truy cập Micro để lắng nghe câu hỏi và tương tác bằng giọng nói tiếng Việt với bạn.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Lily AI sử dụng tính năng nhận dạng giọng nói để phản hồi câu hỏi trực tiếp.</string>
+	<key>UILaunchScreen</key>
+	<dict/>
 </dict>
 </plist>

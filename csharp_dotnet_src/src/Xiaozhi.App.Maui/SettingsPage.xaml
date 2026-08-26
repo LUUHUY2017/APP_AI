@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+             x:Class="Xiaozhi.App.Maui.SettingsPage"
+             Title="⚙ Cài đặt Server"
+             ios:Page.UseSafeArea="True"
+             BackgroundColor="#0d0b1a">
+
+    <ScrollView Padding="16">
+        <VerticalStackLayout Spacing="16">
+            <Label Text="⚙ Cài đặt Cấu hình Server" FontSize="20" FontAttributes="Bold" TextColor="#FFFFFF" Margin="0,10,0,5" />
+            <Label Text="Tùy chỉnh thông số kết nối Xiaozhi Server (Tenclass):" FontSize="13" TextColor="#a0a0c0" />
+
+            <!-- Server WebSocket URL -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Server WebSocket URL:" TextColor="#d0d0ff" FontSize="14" FontAttributes="Bold" />
+                <Frame BackgroundColor="#1c1936" CornerRadius="10" Padding="12,0" HasShadow="False" BorderColor="#2a254d">
+                    <Entry x:Name="WsUrlEntry" TextColor="#ffffff" PlaceholderColor="#606080" HeightRequest="44" />
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Access Token -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Access Token / Auth Token:" TextColor="#d0d0ff" FontSize="14" FontAttributes="Bold" />
+                <Frame BackgroundColor="#1c1936" CornerRadius="10" Padding="12,0" HasShadow="False" BorderColor="#2a254d">
+                    <Entry x:Name="TokenEntry" TextColor="#ffffff" PlaceholderColor="#606080" HeightRequest="44" />
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Device MAC Address -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Device MAC Address (Device-Id):" TextColor="#d0d0ff" FontSize="14" FontAttributes="Bold" />
+                <Frame BackgroundColor="#1c1936" CornerRadius="10" Padding="12,0" HasShadow="False" BorderColor="#2a254d">
+                    <Entry x:Name="DeviceIdEntry" TextColor="#ffffff" PlaceholderColor="#606080" HeightRequest="44" />
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Client ID -->
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Client ID:" TextColor="#d0d0ff" FontSize="14" FontAttributes="Bold" />
+                <Frame BackgroundColor="#1c1936" CornerRadius="10" Padding="12,0" HasShadow="False" BorderColor="#2a254d">
+                    <Entry x:Name="ClientIdEntry" TextColor="#ffffff" PlaceholderColor="#606080" HeightRequest="44" />
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Action Buttons -->
+            <Grid ColumnDefinitions="*, *" ColumnSpacing="12" Margin="0,15,0,20">
+                <Button Grid.Column="0" Text="🔄 Khôi phục mặc định" BackgroundColor="#222238" TextColor="#ff6b81" 
+                        CornerRadius="10" HeightRequest="48" Clicked="OnResetClicked" />
+                <Button Grid.Column="1" Text="💾 Lưu &amp; Kết nối" BackgroundColor="#6c5ce7" TextColor="#ffffff" 
+                        FontAttributes="Bold" CornerRadius="10" HeightRequest="48" Clicked="OnSaveClicked" />
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
