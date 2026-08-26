@@ -33,4 +33,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Lily-AI-iOS-App
-        path: csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/*.ipa
+        path: csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
