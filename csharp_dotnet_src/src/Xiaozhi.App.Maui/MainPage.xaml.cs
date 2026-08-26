@@ -156,6 +156,7 @@ public partial class MainPage : ContentPage
         var text = TextInput.Text?.Trim();
         if (string.IsNullOrWhiteSpace(text)) return;
         TextInput.Text = string.Empty;
+        TextInput.Unfocus();
 
         AddChatMessage(text, isUser: true);
         StatusLabel.Text = "🧠 Đang xử lý...";
