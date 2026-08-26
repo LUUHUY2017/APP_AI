@@ -14,3 +14,10 @@
 Lily.exe_extracted/
 *.iss
 *.log
+
+# Publish outputs & Large Binaries
+publish/
+publish_output/
+*.exe
+*.pdb
+
