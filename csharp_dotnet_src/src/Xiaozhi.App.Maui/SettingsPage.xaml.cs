@@ -146,6 +146,23 @@ public partial class SettingsPage : ContentPage
         }
     }
 
+    private async void OnPasteTokenClicked(object sender, EventArgs e)
+    {
+        if (Clipboard.HasText)
+        {
+            var pasted = await Clipboard.GetTextAsync();
+            if (!string.IsNullOrWhiteSpace(pasted))
+            {
+                TokenEntry.Text = pasted.Trim();
+                await DisplayAlert("Thông báo", "Đã dán Token từ bộ nhớ tạm!", "OK");
+            }
+        }
+        else
+        {
+            await DisplayAlert("Thông báo", "Bộ nhớ tạm (Clipboard) đang trống.", "OK");
+        }
+    }
+
     private void OnRandomMacClicked(object sender, EventArgs e)
     {
         var newMac = GenerateRandomMacAddress();
