@@ -77,11 +77,11 @@ public class XiaozhiWebSocketClient : IProtocol
             _ws.Options.SetRequestHeader("Authorization", $"Bearer {_token}");
             _ws.Options.SetRequestHeader("Device-Id", _deviceId);
             _ws.Options.SetRequestHeader("Client-Id", _clientId);
-            _ws.Options.SetRequestHeader("Protocol-Version", "3");
+            _ws.Options.SetRequestHeader("Protocol-Version", "2"); // WS uses protocol version 2
             _ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
             var uri = new Uri(_serverUrl);
-            Log($"Connecting to {uri} ...");
+            Log($"Connecting to {uri} with Protocol-Version: 2 ...");
 
             await _ws.ConnectAsync(uri, cancellationToken);
             Log($"WebSocket Connected! State={_ws.State}");
@@ -89,7 +89,7 @@ public class XiaozhiWebSocketClient : IProtocol
             // Start background receive loop
             _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
 
-            // Send Hello Handshake
+            // Send Hello Handshake (Version 1 for WS)
             await SendHelloHandshakeAsync();
         }
         catch (Exception ex)
@@ -158,7 +158,7 @@ public class XiaozhiWebSocketClient : IProtocol
         }
         finally
         {
-            Log("ReceiveLoop exited -> Triggering auto-reconnect...");
+            Log("ReceiveLoop exited -> Triggering auto-reconnect in 3s...");
             TriggerAutoReconnect();
         }
     }
@@ -169,7 +169,7 @@ public class XiaozhiWebSocketClient : IProtocol
 
         _ = Task.Run(async () =>
         {
-            await Task.Delay(2000);
+            await Task.Delay(3000);
             if (!_isDisposed && _autoReconnect && !IsConnected)
             {
                 Log("Attempting auto-reconnect now...");
@@ -187,8 +187,9 @@ public class XiaozhiWebSocketClient : IProtocol
         var hello = new HelloMessage
         {
             Type = "hello",
-            Version = 3,
+            Version = 1, // WS uses version 1
             Transport = "websocket",
+            Features = new HelloFeatures { Mcp = false, Aec = false },
             AudioParams = new HelloAudioParams
             {
                 Format = "opus",

@@ -8,13 +8,25 @@ public class HelloMessage
     public string Type { get; set; } = "hello";
 
     [JsonPropertyName("version")]
-    public int Version { get; set; } = 3;
+    public int Version { get; set; } = 1; // WS uses version 1
 
     [JsonPropertyName("transport")]
     public string Transport { get; set; } = "websocket";
 
+    [JsonPropertyName("features")]
+    public HelloFeatures Features { get; set; } = new();
+
     [JsonPropertyName("audio_params")]
     public HelloAudioParams AudioParams { get; set; } = new();
+}
+
+public class HelloFeatures
+{
+    [JsonPropertyName("mcp")]
+    public bool Mcp { get; set; } = false;
+
+    [JsonPropertyName("aec")]
+    public bool Aec { get; set; } = false;
 }
 
 public class HelloAudioParams
