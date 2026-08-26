@@ -156,12 +156,21 @@ class LilyPWA {
       }
 
       console.log('Connecting to WebSocket URL:', url);
-      this.ws = new WebSocket(url);
+
+      // Try connecting with subprotocol if token exists
+      const protocols = CONFIG.token ? ['bearer', CONFIG.token] : [];
+      try {
+        this.ws = new WebSocket(url, protocols);
+      } catch (e) {
+        this.ws = new WebSocket(url);
+      }
+
       this.ws.binaryType = 'arraybuffer';
 
       this.ws.onopen = () => {
         this.isConnected = true;
         this.setStatus('✅ Sẵn sàng', true);
+        this.currentMsgBar.innerText = '✅ Đã kết nối với trợ lý Lily!';
         this.sendHello();
       };
 
@@ -179,8 +188,11 @@ class LilyPWA {
 
       this.ws.onclose = (ev) => {
         this.isConnected = false;
-        this.setStatus('Mất kết nối', false);
+        const errText = ev.code ? `Mất kết nối (${ev.code})` : 'Mất kết nối';
+        this.setStatus(errText, false);
         console.warn('WebSocket Closed Code:', ev.code, 'Reason:', ev.reason);
+        this.currentMsgBar.innerText = `⚠️ ${errText}. Bấm ⚙ Cài đặt để kiểm tra Token / URL Server.`;
+        
         // Auto-reconnect after 3s
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
         this.reconnectTimer = setTimeout(() => this.connect(), 3000);
@@ -188,10 +200,11 @@ class LilyPWA {
 
       this.ws.onerror = (err) => {
         console.error('WebSocket Error:', err);
+        this.setStatus('Lỗi kết nối', false);
       };
     } catch (e) {
       console.error('Connect failed:', e);
-      this.setStatus('Lỗi kết nối', false);
+      this.setStatus('Lỗi khởi tạo WS', false);
     }
   }
 
