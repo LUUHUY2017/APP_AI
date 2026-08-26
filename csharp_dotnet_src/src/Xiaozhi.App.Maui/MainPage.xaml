@@ -9,15 +9,17 @@
     <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="14,4,14,10" VerticalOptions="FillAndExpand">
         <!-- Gemini Top Header -->
         <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,4,0,8">
-            <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
-                <Label Text="☰" FontSize="20" TextColor="#E3E3E3" VerticalOptions="Center" Margin="0,0,4,0" />
+            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                <Label Text="☰" FontSize="20" TextColor="#E3E3E3" VerticalOptions="Center" Margin="0,0,2,0" />
                 <Image Source="susu_logo.png" WidthRequest="26" HeightRequest="26" VerticalOptions="Center" />
-                <Label Text="SUSU FILM AI ⌄" FontSize="17" FontAttributes="Bold" TextColor="#F1F1F1" VerticalOptions="Center" />
+                <Label Text="SUSU FILM AI ⌄" FontSize="16" FontAttributes="Bold" TextColor="#F1F1F1" VerticalOptions="Center" />
+                <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="11" TextColor="#8E918F" VerticalOptions="Center" Margin="4,0,0,0" />
             </HorizontalStackLayout>
 
-            <HorizontalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
-                <Button Text="🔄" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="18" Padding="6" Clicked="OnRefreshClicked" ToolTipProperties.Text="Tải lại" />
-                <Button Text="⚙" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="19" Padding="6" Clicked="OnSettingsClicked" ToolTipProperties.Text="Cài đặt" />
+            <HorizontalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                <Button x:Name="HandsFreeBtn" Text="🎙️ Rảnh tay" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="13" Padding="4" Clicked="OnHandsFreeClicked" ToolTipProperties.Text="Rảnh tay" />
+                <Button Text="🔄" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="17" Padding="4" Clicked="OnRefreshClicked" ToolTipProperties.Text="Tải lại" />
+                <Button Text="⚙" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="18" Padding="4" Clicked="OnSettingsClicked" ToolTipProperties.Text="Cài đặt" />
             </HorizontalStackLayout>
         </Grid>
 
@@ -26,14 +28,14 @@
             <VerticalStackLayout x:Name="ChatStack" Spacing="16" Padding="0,10">
                 <!-- Welcome Message Gemini Style -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Xin chào sếp! Mình là SUSU FILM AI. Mình có thể hỗ trợ gì cho bạn hôm nay?" 
+                    <Label Text="Xin chào sếp! Mình là Tony - SUSU FILM AI. Mình có thể hỗ trợ gì cho bạn hôm nay?" 
                            TextColor="#F1F1F1" FontSize="16" LineHeight="1.4" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
 
         <!-- Gemini Disclaimer Footer -->
-        <Label Grid.Row="2" Text="SUSU FILM AI là một trợ lý ảo AI và có thể mắc sai sót." 
+        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="SUSU FILM AI là một trợ lý ảo AI và có thể mắc sai sót." 
                FontSize="11" TextColor="#8E918F" HorizontalOptions="Center" Margin="0,4,0,8" />
 
         <!-- Floating Gemini Input Capsule Bar -->

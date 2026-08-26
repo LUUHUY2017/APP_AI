@@ -85,7 +85,7 @@ public partial class MainPage : ContentPage
                 CurrentMsgLabel.Text = "✅ Đã kết nối với trợ lý Tony!";
             });
         }
-        catch (Exception ex)
+        catch
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
