@@ -33,10 +33,6 @@
                         <Button Grid.Column="1" x:Name="OpenActiveWebBtn" Text="🌐 Mở Web Kích hoạt" BackgroundColor="#222044" TextColor="#8e94f7" 
                                 CornerRadius="8" HeightRequest="40" FontSize="13" Clicked="OnOpenActiveWebClicked" IsEnabled="False" />
                     </Grid>
-
-                    <!-- Direct Auto Token Button -->
-                    <Button Text="🚀 Kích hoạt Nhanh: Tự tạo Token (Bỏ qua OTP)" BackgroundColor="#2ed573" TextColor="#000000" 
-                            FontAttributes="Bold" CornerRadius="8" HeightRequest="40" FontSize="13" Clicked="OnAutoGenerateTokenClicked" />
                 </VerticalStackLayout>
             </Frame>
 

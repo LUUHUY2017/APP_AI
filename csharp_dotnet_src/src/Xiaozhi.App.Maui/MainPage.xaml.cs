@@ -131,9 +131,9 @@ public partial class MainPage : ContentPage
     private async Task StartRecordingAsync()
     {
         _isRecording = true;
-        MicButton.Text = "🔴";
-        MicButton.BackgroundColor = Color.FromArgb("#FF3B30");
-        MicButton.TextColor = Colors.White;
+        MicButton.Text = "🎙️";
+        MicButton.BackgroundColor = Colors.Transparent;
+        MicButton.TextColor = Color.FromArgb("#7C5CFC");
         StatusLabel.Text = "🎙️ Đang lắng nghe...";
         StartSilenceAutoSendTimer();
 
@@ -171,13 +171,6 @@ public partial class MainPage : ContentPage
         MicButton.BackgroundColor = Colors.Transparent;
         MicButton.TextColor = Color.FromArgb("#AEB7C2");
         StatusLabel.Text = "🧠 Đang xử lý...";
-
-        // Rung máy iPhone báo hiệu đã nhận câu nói!
-        try
-        {
-            Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(220));
-        }
-        catch { }
 
         if (_client.IsConnected)
         {
