@@ -109,6 +109,8 @@ public partial class MainPage : ContentPage
         }
     }
 
+    private System.Timers.Timer? _silenceTimer;
+
     private async void OnMicButtonClicked(object sender, EventArgs e)
     {
         if (!_isRecording)
@@ -127,15 +129,37 @@ public partial class MainPage : ContentPage
         MicButton.Text = "⏹️ Đang nghe (Bấm để dừng)";
         MicButton.BackgroundColor = Colors.DarkRed;
         StatusLabel.Text = "🎙️ Đang lắng nghe...";
+        StartSilenceAutoSendTimer();
+
         if (_client.IsConnected)
         {
             await _client.StartListeningAsync(mode: "manual");
         }
     }
 
+    private void StartSilenceAutoSendTimer()
+    {
+        _silenceTimer?.Stop();
+        _silenceTimer?.Dispose();
+        _silenceTimer = new System.Timers.Timer(1400) { AutoReset = false };
+        _silenceTimer.Elapsed += (s, e) =>
+        {
+            if (_isRecording)
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    StatusLabel.Text = "⚡ Đã phát hiện im lặng. Tự động gửi...";
+                    await StopRecordingAndProcessAsync();
+                });
+            }
+        };
+        _silenceTimer.Start();
+    }
+
     private async Task StopRecordingAndProcessAsync()
     {
         if (!_isRecording) return;
+        _silenceTimer?.Stop();
         _isRecording = false;
         MicButton.Text = "🎤 Bấm để nói";
         MicButton.BackgroundColor = Color.FromArgb("#6c5ce7");
