@@ -86,17 +86,22 @@ public class DeviceActivationService
                 if (actElem.TryGetProperty("code", out var codeProp)) result.Code = codeProp.GetString();
                 if (actElem.TryGetProperty("url", out var urlProp)) result.QrUrl = urlProp.GetString();
                 if (actElem.TryGetProperty("message", out var msgProp)) result.Message = msgProp.GetString();
-                return result;
+                if (!string.IsNullOrEmpty(result.Code)) return result;
             }
 
-            // If response code or format directly gives code
-            if (root.TryGetProperty("code", out var directCode))
+            // Parse direct properties: code, activation_code, otp, verification_code
+            string[] possibleCodeProps = { "code", "activation_code", "otp", "verification_code", "challenge" };
+            foreach (var prop in possibleCodeProps)
             {
-                result.Code = directCode.GetString();
-                result.QrUrl = $"https://xiaozhi.tenclass.net/active?code={result.Code}";
-                return result;
+                if (root.TryGetProperty(prop, out var codeElem))
+                {
+                    result.Code = codeElem.GetString();
+                    result.QrUrl = $"https://xiaozhi.me/active?code={result.Code}";
+                    return result;
+                }
             }
 
+            result.Message = $"Server phản hồi: {responseBody}";
             return result;
         }
         catch (Exception ex)

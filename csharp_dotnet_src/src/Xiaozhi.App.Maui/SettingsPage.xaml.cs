@@ -52,12 +52,24 @@ public partial class SettingsPage : ContentPage
             return;
         }
 
-        var code = result.Code ?? new Random().Next(100000, 999999).ToString();
-        _activeWebUrl = result.QrUrl ?? $"https://xiaozhi.me/active?code={code}";
+        if (!string.IsNullOrEmpty(result.Code))
+        {
+            var code = result.Code;
+            _activeWebUrl = result.QrUrl ?? $"https://xiaozhi.me/active?code={code}";
 
-        OtpCodeLabel.Text = code;
-        OtpStatusLabel.Text = "👉 Đã tạo mã OTP 6 số! Bạn hãy nhập 6 số này trên trang xiaozhi.me hoặc bấm nút bên cạnh:";
-        OpenActiveWebBtn.IsEnabled = true;
+            OtpCodeLabel.Text = code;
+            OtpStatusLabel.Text = "👉 Đã lấy thành công mã OTP từ Server! Hãy nhập 6 số này trên trang xiaozhi.me:";
+            OpenActiveWebBtn.IsEnabled = true;
+        }
+        else
+        {
+            OtpCodeLabel.Text = "NO CODE";
+            OtpStatusLabel.Text = !string.IsNullOrEmpty(result.Message)
+                ? $"⚠️ {result.Message}"
+                : "⚠️ Server chưa cấp mã OTP cho MAC này.";
+            OpenActiveWebBtn.IsEnabled = false;
+            return;
+        }
 
         // Auto Poll for Token in background matching WPF app
         _ = Task.Run(async () =>
