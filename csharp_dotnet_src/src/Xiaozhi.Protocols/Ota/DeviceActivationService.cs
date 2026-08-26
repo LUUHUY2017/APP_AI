@@ -55,6 +55,7 @@ public class DeviceActivationService
                 Content = jsonContent
             };
             request.Headers.Add("Device-Id", macAddress);
+            request.Headers.Add("Client-Id", deviceId);
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
