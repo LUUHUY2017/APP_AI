@@ -1,0 +1,15 @@
+workflows:
+  ios-maui-build:
+    name: Build iOS MAUI (.ipa)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+    scripts:
+      - name: Install .NET 8 SDK
+        script: |
+          dotnet workload install maui-ios
+      - name: Build MAUI iOS App
+        script: |
+          cd csharp_dotnet_src
+          dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios17.0 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false
+    artifacts:
+      - csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios17.0/ios-arm64/*.ipa
