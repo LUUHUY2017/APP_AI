@@ -82,7 +82,7 @@ public partial class MainPage : ContentPage
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 StatusLabel.Text = "✅ Sẵn sàng";
-                CurrentMsgLabel.Text = "✅ Đã kết nối với trợ lý Lily!";
+                CurrentMsgLabel.Text = "✅ Đã kết nối với trợ lý Tony!";
             });
         }
         catch (Exception ex)

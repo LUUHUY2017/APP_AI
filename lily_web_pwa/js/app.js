@@ -129,7 +129,7 @@ class LilyPWA {
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
     if (role === 'ai') {
-      bubble.innerHTML = `<span class="author">🌸 Lily</span>${content}`;
+      bubble.innerHTML = `<span class="author">🤖 Tony</span>${content}`;
     } else {
       bubble.innerText = content;
     }
