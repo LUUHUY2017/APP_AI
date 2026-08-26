@@ -23,11 +23,12 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly HttpClient _httpClient = new();
     private bool _isListening = false;
     private CancellationTokenSource? _connectCts;
+    private System.Timers.Timer? _ttsResetTimer;
 
     private bool _isConnected;
     private bool _isRecording;
     private bool _isSpeaking;
-    private string _statusText = "Đang kết nối...";
+    private string _statusText = "✅ Sẵn sàng";
     private string _currentChatMessage = "Bấm hoặc giữ 🎤 để nói, hoặc gõ tin nhắn bên dưới.";
 
     public bool IsConnected
@@ -67,6 +68,17 @@ public class MainViewModel : INotifyPropertyChanged
         _opusCodec = new OpusCodec();
         _audioService = new NAudioAudioService();
         _audioService.OnAudioRecorded += OnAudioCaptured;
+
+        // Auto-reset speaking state after audio finishes
+        _ttsResetTimer = new System.Timers.Timer(3000) { AutoReset = false };
+        _ttsResetTimer.Elapsed += (s, e) =>
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                IsSpeaking = false;
+                if (!IsRecording) StatusText = "✅ Sẵn sàng";
+            });
+        };
     }
 
     private async void OnAudioCaptured(byte[] pcmBytes)
@@ -84,11 +96,17 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task InitializeAsync()
     {
-        await ConnectAsync();
+        await EnsureConnectedAsync();
     }
 
-    private async Task ConnectAsync()
+    public async Task<bool> EnsureConnectedAsync()
     {
+        if (_protocolClient != null && _protocolClient.IsConnected)
+        {
+            IsConnected = true;
+            return true;
+        }
+
         var config = ConfigManager.Instance.Config;
         var otaUrl = config.SystemOptions.Network.OtaVersionUrl;
         var mac = config.SystemOptions.DeviceId;
@@ -96,13 +114,12 @@ public class MainViewModel : INotifyPropertyChanged
         var token = config.SystemOptions.Network.WebSocketAccessToken;
         var wsUrl = config.SystemOptions.Network.WebSocketUrl;
 
-        // 1. Đăng ký firmware qua OTA trước khi kết nối WebSocket
         try
         {
             var otaPayload = new
             {
                 application = new { version = "1.7.2" },
-                board = new { name = "xiaozhi-test", mac = mac }
+                board = new { name = "xiaozhi-test" }
             };
 
             using var req = new HttpRequestMessage(HttpMethod.Post, otaUrl);
@@ -140,14 +157,18 @@ public class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            _connectCts = new CancellationTokenSource();
+            _connectCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await _protocolClient.ConnectAsync(_connectCts.Token);
+            IsConnected = true;
+            StatusText = "✅ Sẵn sàng";
+            return true;
         }
         catch (Exception ex)
         {
             IsConnected = false;
             StatusText = "Lỗi kết nối";
-            CurrentChatMessage = $"Lỗi: {ex.Message}.";
+            CurrentChatMessage = $"Lỗi: {ex.Message}";
+            return false;
         }
     }
 
@@ -156,7 +177,7 @@ public class MainViewModel : INotifyPropertyChanged
         _connectCts?.Cancel();
         _protocolClient = null;
         IsConnected = false;
-        await ConnectAsync();
+        await EnsureConnectedAsync();
     }
 
     private void WireEvents()
@@ -173,6 +194,10 @@ public class MainViewModel : INotifyPropertyChanged
                     var pcmBytes = new byte[pcmShorts.Length * 2];
                     Buffer.BlockCopy(pcmShorts, 0, pcmBytes, 0, pcmBytes.Length);
                     _audioService.PlayAudio(pcmBytes);
+
+                    // Reset auto timer on each incoming audio packet
+                    _ttsResetTimer?.Stop();
+                    _ttsResetTimer?.Start();
                 }
             }
             catch { }
@@ -199,6 +224,10 @@ public class MainViewModel : INotifyPropertyChanged
                     Role = "assistant",
                     Timestamp = DateTime.Now
                 });
+
+                // Auto reset speaking state 4 seconds after text response
+                _ttsResetTimer?.Stop();
+                _ttsResetTimer?.Start();
             });
             await Task.CompletedTask;
         };
@@ -207,16 +236,18 @@ public class MainViewModel : INotifyPropertyChanged
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
-                IsSpeaking = state == "start" || state == "sentence_start";
-                if (state == "stop")
+                if (state == "start" || state == "sentence_start")
+                {
+                    IsSpeaking = true;
+                    StatusText = "🔊 AI đang trả lời...";
+                    _ttsResetTimer?.Stop();
+                    _ttsResetTimer?.Start();
+                }
+                else if (state == "stop" || state == "sentence_end")
                 {
                     _audioService.StopPlayback();
                     IsSpeaking = false;
                     StatusText = "✅ Sẵn sàng";
-                }
-                else if (state == "start" || state == "sentence_start")
-                {
-                    StatusText = "🔊 AI đang trả lời...";
                 }
             });
             await Task.CompletedTask;
@@ -239,6 +270,7 @@ public class MainViewModel : INotifyPropertyChanged
                 IsRecording = false;
                 IsSpeaking = false;
                 _isListening = false;
+                IsConnected = false;
             });
             await Task.CompletedTask;
         };
@@ -246,12 +278,15 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task StartListeningAsync()
     {
-        if (_protocolClient?.IsConnected != true) return;
+        if (!await EnsureConnectedAsync()) return;
+
         _isListening = true;
         IsRecording = true;
         IsSpeaking = false;
         StatusText = "🎤 Đang nghe...";
-        await _protocolClient.StartListeningAsync(mode: "manual");
+        _ttsResetTimer?.Stop();
+
+        await _protocolClient!.StartListeningAsync(mode: "manual");
         _audioService.StartRecording();
     }
 
@@ -263,22 +298,27 @@ public class MainViewModel : INotifyPropertyChanged
         IsRecording = false;
         StatusText = "🧠 Đang xử lý...";
         CurrentChatMessage = "⏳ Đang xử lý...";
+
         if (_protocolClient?.IsConnected == true)
             await _protocolClient.StopListeningAsync();
     }
 
     public async Task SendTextMessageAsync(string text)
     {
-        if (string.IsNullOrWhiteSpace(text) || _protocolClient?.IsConnected != true) return;
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (!await EnsureConnectedAsync()) return;
+
         MessageAdded?.Invoke(new ChatMessage { Content = text, Role = "user", Timestamp = DateTime.Now });
         StatusText = "🧠 Đang xử lý...";
         CurrentChatMessage = "⏳ Đang gửi câu hỏi...";
-        await _protocolClient.SendTextQueryAsync(text);
+
+        await _protocolClient!.SendTextQueryAsync(text);
     }
 
     public async Task AbortAsync()
     {
         _audioService.StopPlayback();
+        _ttsResetTimer?.Stop();
         IsSpeaking = false;
         StatusText = "⛔ Đã dừng";
         if (_protocolClient?.IsConnected == true)
