@@ -20,7 +20,9 @@ jobs:
 
     - name: Install .NET MAUI Workloads
       run: |
+        cd csharp_dotnet_src
         dotnet workload install maui-ios
+        dotnet workload restore src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj
 
     - name: Build and Publish MAUI iOS App
       run: |
