@@ -204,6 +204,93 @@ public partial class MainPage : ContentPage
         string? uri = null;
         string appName = "";
 
+        // 1. MAPS NAVIGATION COMMANDS ("Chỉ đường tới...", "Dẫn đường đi...")
+        if (lower.Contains("chỉ đường") || lower.Contains("dẫn đường") || lower.Contains("tìm đường"))
+        {
+            string destination = text.Replace("chỉ đường tới", "", StringComparison.OrdinalIgnoreCase)
+                                     .Replace("chỉ đường đi", "", StringComparison.OrdinalIgnoreCase)
+                                     .Replace("dẫn đường đi", "", StringComparison.OrdinalIgnoreCase)
+                                     .Replace("dẫn đường tới", "", StringComparison.OrdinalIgnoreCase)
+                                     .Replace("tìm đường đi", "", StringComparison.OrdinalIgnoreCase)
+                                     .Replace("tìm đường tới", "", StringComparison.OrdinalIgnoreCase)
+                                     .Trim();
+
+            if (string.IsNullOrWhiteSpace(destination)) destination = "Hà Nội";
+            string mapsUrl = $"http://maps.apple.com/?daddr={Uri.EscapeDataString(destination)}";
+            string reply = $"Dạ, em đang khởi chạy Bản đồ dẫn đường tới {destination} cho sếp!";
+
+            StatusLabel.Text = "🗺️ Đang khởi chạy Bản đồ...";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+
+            await Task.Delay(800);
+            await Launcher.Default.OpenAsync(new Uri(mapsUrl));
+            return true;
+        }
+
+        // 2. ZALO CALL / MESSAGE COMMANDS ("Gọi Zalo cho...", "Nhắn Zalo cho...")
+        if (lower.Contains("gọi zalo") || lower.Contains("nhắn zalo") || lower.Contains("chát zalo"))
+        {
+            string target = text.Replace("gọi zalo cho", "", StringComparison.OrdinalIgnoreCase)
+                                .Replace("nhắn zalo cho", "", StringComparison.OrdinalIgnoreCase)
+                                .Replace("gọi zalo", "", StringComparison.OrdinalIgnoreCase)
+                                .Replace("nhắn zalo", "", StringComparison.OrdinalIgnoreCase)
+                                .Trim();
+
+            string reply = string.IsNullOrWhiteSpace(target)
+                ? "Dạ, em mở Zalo cho sếp đây ạ!"
+                : $"Dạ, em đang mở Zalo để sếp liên hệ với {target} ạ!";
+
+            StatusLabel.Text = "💬 Đang mở Zalo...";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+
+            await Task.Delay(800);
+            try { await Launcher.Default.OpenAsync(new Uri("zalo://")); }
+            catch { await Launcher.Default.OpenAsync(new Uri("https://zalo.me")); }
+            return true;
+        }
+
+        // 3. PHONE CALL COMMANDS ("Gọi điện cho...", "Gọi cho...")
+        if (lower.Contains("gọi điện cho") || lower.Contains("gọi điện") || lower.Contains("gọi cho"))
+        {
+            string target = text.Replace("gọi điện cho", "", StringComparison.OrdinalIgnoreCase)
+                                .Replace("gọi cho", "", StringComparison.OrdinalIgnoreCase)
+                                .Replace("gọi điện", "", StringComparison.OrdinalIgnoreCase)
+                                .Trim();
+
+            // Extract phone number if digits present
+            var digitsOnly = new string(target.Where(char.IsDigit).ToArray());
+            if (!string.IsNullOrEmpty(digitsOnly) && digitsOnly.Length >= 3)
+            {
+                string callUri = $"tel:{digitsOnly}";
+                string reply = $"Dạ, em đang kết nối cuộc gọi tới số {digitsOnly} cho sếp!";
+                StatusLabel.Text = "📞 Đang gọi điện...";
+                CurrentMsgLabel.Text = reply;
+                AddChatMessage(reply, isUser: false);
+                _ = SpeakAsync(reply);
+
+                await Task.Delay(800);
+                await Launcher.Default.OpenAsync(new Uri(callUri));
+                return true;
+            }
+            else
+            {
+                string reply = $"Dạ, em đang mở ứng dụng Điện thoại & Danh bạ để sếp gọi cho {target} đây ạ!";
+                StatusLabel.Text = "📞 Đang mở Danh bạ...";
+                CurrentMsgLabel.Text = reply;
+                AddChatMessage(reply, isUser: false);
+                _ = SpeakAsync(reply);
+
+                await Task.Delay(800);
+                try { await Launcher.Default.OpenAsync(new Uri("tel:")); } catch { }
+                return true;
+            }
+        }
+
+        // 4. APP LAUNCHERS (YouTube, Facebook, TikTok, Maps)
         if (lower.Contains("mở youtube") || lower.Contains("bật youtube"))
         {
             uri = "youtube://";

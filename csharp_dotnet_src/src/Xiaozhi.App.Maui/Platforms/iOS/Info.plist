@@ -41,6 +41,8 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
+	<key>NSContactsUsageDescription</key>
+	<string>Ứng dụng cần quyền truy cập Danh bạ để gọi điện và nhắn tin theo lệnh giọng nói của bạn.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>youtube</string>
@@ -50,6 +52,9 @@
 		<string>tiktok</string>
 		<string>snssdk1128</string>
 		<string>maps</string>
+		<string>tel</string>
+		<string>telprompt</string>
+		<string>comgooglemaps</string>
 	</array>
 </dict>
 </plist>
