@@ -6,9 +6,13 @@ workflows:
     scripts:
       - name: Install .NET 8 SDK
         script: |
+          curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 8.0.400
+          export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
+          echo "export PATH=\"$HOME/.dotnet:\$PATH\"" >> $CM_ENV
           dotnet workload install maui-ios
       - name: Build MAUI iOS App
         script: |
+          export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
           cd csharp_dotnet_src
           dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios17.0 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false
     artifacts:
