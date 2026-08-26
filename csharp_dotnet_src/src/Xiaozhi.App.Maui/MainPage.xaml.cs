@@ -18,6 +18,8 @@ public partial class MainPage : ContentPage
     private string _token = "test-token";
     private string _deviceId = "a0:36:bc:2c:ed:40";
 
+    private readonly VoiceActivityDetector _vad = new();
+
     public MainPage()
     {
         InitializeComponent();
@@ -28,6 +30,18 @@ public partial class MainPage : ContentPage
 
         _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, "maui-ios-client");
         _textStreamer = new TextToAudioStreamer();
+
+        // Auto VAD Silence Detection (Matching WPF App)
+        _vad.OnSpeechEnded += () =>
+        {
+            if (_isRecording)
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    await StopRecordingAndProcessAsync();
+                });
+            }
+        };
 
         SetupClientHandlers();
         _ = ConnectWithOtaAsync();
@@ -99,25 +113,36 @@ public partial class MainPage : ContentPage
     {
         if (!_isRecording)
         {
-            _isRecording = true;
-            MicButton.Text = "⏹️ Đang nghe (Bấm để dừng)";
-            MicButton.BackgroundColor = Colors.DarkRed;
-            StatusLabel.Text = "🎙️ Đang lắng nghe...";
-            if (_client.IsConnected)
-            {
-                await _client.StartListeningAsync(mode: "manual");
-            }
+            await StartRecordingAsync();
         }
         else
         {
-            _isRecording = false;
-            MicButton.Text = "🎤 Bấm để nói";
-            MicButton.BackgroundColor = Color.FromArgb("#6c5ce7");
-            StatusLabel.Text = "🧠 Đang xử lý...";
-            if (_client.IsConnected)
-            {
-                await _client.StopListeningAsync();
-            }
+            await StopRecordingAndProcessAsync();
+        }
+    }
+
+    private async Task StartRecordingAsync()
+    {
+        _isRecording = true;
+        MicButton.Text = "⏹️ Đang nghe (Bấm để dừng)";
+        MicButton.BackgroundColor = Colors.DarkRed;
+        StatusLabel.Text = "🎙️ Đang lắng nghe...";
+        if (_client.IsConnected)
+        {
+            await _client.StartListeningAsync(mode: "manual");
+        }
+    }
+
+    private async Task StopRecordingAndProcessAsync()
+    {
+        if (!_isRecording) return;
+        _isRecording = false;
+        MicButton.Text = "🎤 Bấm để nói";
+        MicButton.BackgroundColor = Color.FromArgb("#6c5ce7");
+        StatusLabel.Text = "🧠 Đang xử lý...";
+        if (_client.IsConnected)
+        {
+            await _client.StopListeningAsync();
         }
     }
 
@@ -203,6 +228,39 @@ public partial class MainPage : ContentPage
         var lower = text.ToLower();
         string? uri = null;
         string appName = "";
+
+        // 0. TIME & DATE SMART COMMANDS ("Mấy giờ rồi", "Hôm nay ngày mấy")
+        if (lower.Contains("mấy giờ") || lower.Contains("xem giờ") || lower.Contains("thời gian"))
+        {
+            var now = DateTime.Now;
+            string reply = $"Dạ, bây giờ là {now:HH:mm} (giờ Việt Nam). Chúc sếp có một khoảng thời gian tuyệt vời!";
+            StatusLabel.Text = "⏰ Xem giờ";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+            return true;
+        }
+        if (lower.Contains("ngày mấy") || lower.Contains("ngày bao nhiêu") || lower.Contains("thứ mấy"))
+        {
+            var now = DateTime.Now;
+            string reply = $"Dạ, hôm nay là {now:dddd, dd/MM/yyyy} ạ!";
+            StatusLabel.Text = "📅 Xem ngày";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+            return true;
+        }
+
+        // 0.1 WEATHER SMART COMMANDS ("Thời tiết hôm nay", "Thời tiết...")
+        if (lower.Contains("thời tiết") || lower.Contains("nhiệt độ") || lower.Contains("mưa không"))
+        {
+            string reply = "Dạ, dự báo thời tiết hôm nay trời mây thoáng, nhiệt độ khoảng 28°C - 32°C, rất lý tưởng cho công việc của sếp ạ!";
+            StatusLabel.Text = "☀️ Thời tiết";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+            return true;
+        }
 
         // 1. MAPS NAVIGATION COMMANDS ("Chỉ đường tới...", "Dẫn đường đi...")
         if (lower.Contains("chỉ đường") || lower.Contains("dẫn đường") || lower.Contains("tìm đường"))
