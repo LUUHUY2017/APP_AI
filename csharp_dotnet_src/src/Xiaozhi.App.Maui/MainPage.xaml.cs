@@ -207,28 +207,90 @@ public partial class MainPage : ContentPage
         catch { }
     }
 
+    private async void OnPlusClicked(object sender, EventArgs e)
+    {
+        string action = await DisplayActionSheet("Tùy chọn SUSU FILM AI", "Hủy", null, "📸 Ghi âm giọng nói", "🖼️ Tải hình ảnh", "⚙️ Cài đặt Server");
+        if (action == "⚙️ Cài đặt Server")
+        {
+            OnSettingsClicked(sender, e);
+        }
+        else if (action == "📸 Ghi âm giọng nói")
+        {
+            OnMicButtonClicked(sender, e);
+        }
+    }
+
     private void AddChatMessage(string text, bool isUser)
     {
-        var frame = new Frame
+        if (isUser)
         {
-            BackgroundColor = isUser ? Color.FromArgb("#6c5ce7") : Color.FromArgb("#18152e"),
-            CornerRadius = 12,
-            Padding = 12,
-            HasShadow = false,
-            BorderColor = Colors.Transparent,
-            HorizontalOptions = isUser ? LayoutOptions.End : LayoutOptions.Start,
-            MaximumWidthRequest = 280
-        };
+            // User Bubble (Gemini pill on right)
+            var frame = new Frame
+            {
+                BackgroundColor = Color.FromArgb("#2F2F2F"),
+                CornerRadius = 18,
+                Padding = new Thickness(14, 10),
+                HasShadow = false,
+                BorderColor = Colors.Transparent,
+                HorizontalOptions = LayoutOptions.End,
+                MaximumWidthRequest = 290
+            };
 
-        var label = new Label
+            var label = new Label
+            {
+                Text = text,
+                TextColor = Color.FromArgb("#F1F1F1"),
+                FontSize = 15,
+                LineHeight = 1.35
+            };
+
+            frame.Content = label;
+            ChatStack.Children.Add(frame);
+        }
+        else
         {
-            Text = text,
-            TextColor = Colors.White,
-            FontSize = 15
-        };
+            // AI Message (Gemini style clean text on black with action row)
+            var container = new VerticalStackLayout
+            {
+                Spacing = 6,
+                HorizontalOptions = LayoutOptions.Start,
+                MaximumWidthRequest = 340
+            };
 
-        frame.Content = label;
-        ChatStack.Children.Add(frame);
+            var aiText = new Label
+            {
+                Text = text,
+                TextColor = Color.FromArgb("#E3E3E3"),
+                FontSize = 15,
+                LineHeight = 1.45
+            };
+
+            // Gemini Action Bar: Copy, Share, Speak, Like, Dislike
+            var actionBar = new HorizontalStackLayout
+            {
+                Spacing = 12,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+
+            var btnCopy = new Button { Text = "📋", BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#C4C7C5"), FontSize = 14, Padding = 2, WidthRequest = 32, HeightRequest = 32 };
+            btnCopy.Clicked += async (s, e) => { await Clipboard.SetTextAsync(text); await DisplayAlert("Thông báo", "Đã sao chép câu trả lời!", "OK"); };
+
+            var btnSpeak = new Button { Text = "🔊", BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#C4C7C5"), FontSize = 14, Padding = 2, WidthRequest = 32, HeightRequest = 32 };
+            btnSpeak.Clicked += (s, e) => { _ = SpeakAsync(text); };
+
+            var btnLike = new Button { Text = "👍", BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#C4C7C5"), FontSize = 14, Padding = 2, WidthRequest = 32, HeightRequest = 32 };
+            var btnDislike = new Button { Text = "👎", BackgroundColor = Colors.Transparent, TextColor = Color.FromArgb("#C4C7C5"), FontSize = 14, Padding = 2, WidthRequest = 32, HeightRequest = 32 };
+
+            actionBar.Children.Add(btnCopy);
+            actionBar.Children.Add(btnSpeak);
+            actionBar.Children.Add(btnLike);
+            actionBar.Children.Add(btnDislike);
+
+            container.Children.Add(aiText);
+            container.Children.Add(actionBar);
+
+            ChatStack.Children.Add(container);
+        }
 
         Task.Delay(100).ContinueWith(_ =>
         {
