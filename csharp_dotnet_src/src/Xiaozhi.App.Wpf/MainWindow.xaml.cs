@@ -61,8 +61,8 @@ public partial class MainWindow : Window
         {
             TalkBtnBorder.Background = new SolidColorBrush(Color.FromRgb(220, 40, 70));
             TalkBtnIcon.Text = "⏹";
-            TalkBtnLabel.Text = "Bấm để dừng và gửi";
-            TalkHintLabel.Text = "🔴 Đang ghi âm — Bấm lại nút này khi nói xong";
+            TalkBtnLabel.Text = "Bấm để gửi";
+            TalkHintLabel.Text = "🔴 Đang nghe... Bấm lại để gửi";
             CurrentMsgLabel.Text = "🎤 Đang lắng nghe giọng nói của bạn...";
 
             var pulse = new DoubleAnimation(0.0, 0.9, new Duration(TimeSpan.FromMilliseconds(500)))
@@ -76,7 +76,7 @@ public partial class MainWindow : Window
             TalkBtnBorder.Background = new SolidColorBrush(Color.FromRgb(107, 63, 204));
             TalkBtnIcon.Text = "🎤";
             TalkBtnLabel.Text = "Bấm để nói";
-            TalkHintLabel.Text = "👇 Bấm 1 lần để nói, bấm lại để gửi (hoặc giữ để nói)";
+            TalkHintLabel.Text = "👇 Bấm 1 lần để nói (hoặc giữ để nói)";
             PulseRing.BeginAnimation(OpacityProperty, null);
             PulseRing.Opacity = 0;
         }
@@ -129,10 +129,8 @@ public partial class MainWindow : Window
         });
     }
 
-    // Toggle on Click & Support Long-Press
     private void TalkBtn_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (!_vm.IsConnected) return;
         _pressTimer.Restart();
 
         if (!_isRecordingActive)
@@ -141,7 +139,6 @@ public partial class MainWindow : Window
         }
         else
         {
-            // Already recording -> click to stop
             _ = _vm.StopListeningAsync();
         }
         e.Handled = true;
@@ -150,7 +147,6 @@ public partial class MainWindow : Window
     private void TalkBtn_MouseUp(object sender, MouseButtonEventArgs e)
     {
         _pressTimer.Stop();
-        // If held for longer than 600ms, release acts as stop (Push-to-Talk)
         if (_pressTimer.ElapsedMilliseconds > 600 && _isRecordingActive)
         {
             _ = _vm.StopListeningAsync();
@@ -172,9 +168,20 @@ public partial class MainWindow : Window
         SendCurrentText();
     }
 
+    private void TxtInput_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        var effectiveKey = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
+        if (effectiveKey == Key.Enter || effectiveKey == Key.Return)
+        {
+            SendCurrentText();
+            e.Handled = true;
+        }
+    }
+
     private void TxtInput_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Enter)
+        var effectiveKey = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
+        if (effectiveKey == Key.Enter || effectiveKey == Key.Return)
         {
             SendCurrentText();
             e.Handled = true;

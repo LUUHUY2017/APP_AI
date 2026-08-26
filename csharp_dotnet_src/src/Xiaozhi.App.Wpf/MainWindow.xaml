@@ -20,7 +20,7 @@
             <RowDefinition Height="52"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="46"/>
+            <RowDefinition Height="48"/>
             <RowDefinition Height="110"/>
         </Grid.RowDefinitions>
 
@@ -31,8 +31,8 @@
                         Width="34" Height="34" Background="Transparent" BorderBrush="Transparent"
                         Foreground="#8888BB" FontSize="18" Click="OpenSettings_Click" Cursor="Hand"/>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="#FF4444" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="StatusLabel" Text="Đang kết nối..." FontSize="13"
+                    <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="#4CAF50" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="13"
                                FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#C0C0D8"/>
                 </StackPanel>
             </DockPanel>
@@ -45,31 +45,34 @@
         </ScrollViewer>
 
         <!-- CURRENT STATUS BUBBLE -->
-        <Border Grid.Row="2" Background="#161628" Padding="14,8" MinHeight="40">
-            <TextBlock x:Name="CurrentMsgLabel" Text="👇 Nhấn GIỮ 🎤 để nói, hoặc gõ tin nhắn bên dưới." 
+        <Border Grid.Row="2" Background="#161628" Padding="14,8" MinHeight="36">
+            <TextBlock x:Name="CurrentMsgLabel" Text="Bấm hoặc giữ 🎤 để nói, hoặc gõ tin nhắn bên dưới." 
                        TextWrapping="Wrap" FontSize="12" Foreground="#A0A0D0" LineHeight="18"/>
         </Border>
 
         <!-- TEXT INPUT ROW -->
         <Border Grid.Row="3" Background="#121222" Padding="10,6">
             <DockPanel>
-                <Button Content="Gửi" DockPanel.Dock="Right" Width="55" Height="32"
-                        Background="#6B3FCC" Foreground="White" FontWeight="Bold" FontSize="12"
-                        BorderThickness="0" Cursor="Hand" Click="SendText_Click" Margin="6,0,0,0">
+                <Button Content="Gửi" DockPanel.Dock="Right" Width="60" Height="34"
+                        Background="#6B3FCC" Foreground="White" FontWeight="Bold" FontSize="13"
+                        BorderThickness="0" Cursor="Hand" Click="SendText_Click" Margin="8,0,0,0">
                     <Button.Template>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}" CornerRadius="16">
+                            <Border Background="{TemplateBinding Background}" CornerRadius="17">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                         </ControlTemplate>
                     </Button.Template>
                 </Button>
-                <TextBox x:Name="TxtInput" KeyDown="TxtInput_KeyDown"
+                <TextBox x:Name="TxtInput" 
+                         PreviewKeyDown="TxtInput_PreviewKeyDown"
+                         KeyDown="TxtInput_KeyDown"
+                         AcceptsReturn="False"
                          Background="#1E1E34" Foreground="White" BorderThickness="0"
-                         FontSize="13" Padding="10,6" VerticalContentAlignment="Center">
+                         FontSize="13" Padding="12,7" VerticalContentAlignment="Center">
                     <TextBox.Resources>
                         <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="16"/>
+                            <Setter Property="CornerRadius" Value="17"/>
                         </Style>
                     </TextBox.Resources>
                 </TextBox>
@@ -92,7 +95,7 @@
 
             <!-- Hold-to-talk button area -->
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="50,0,0,0">
-                <TextBlock x:Name="TalkHintLabel" Text="👇 Nhấn GIỮ để nói, THẢ để gửi"
+                <TextBlock x:Name="TalkHintLabel" Text="👇 Bấm 1 lần để nói (hoặc giữ để nói)"
                            FontSize="10" Foreground="#666699"
                            HorizontalAlignment="Center" Margin="0,0,0,6"/>
                 <Border x:Name="TalkBtnBorder" CornerRadius="24" Background="#6B3FCC"
@@ -102,7 +105,7 @@
                         MouseLeave="TalkBtn_MouseLeave">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                         <TextBlock x:Name="TalkBtnIcon" Text="🎤" FontSize="16" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock x:Name="TalkBtnLabel" Text="Giữ để nói" FontSize="14"
+                        <TextBlock x:Name="TalkBtnLabel" Text="Bấm để nói" FontSize="14"
                                    FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Border>
