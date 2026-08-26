@@ -253,6 +253,31 @@ public partial class MainWindow : Window
         CurrentMsgLabel.Text = "✅ Đã đồng bộ cấu hình thành công! Bạn có thể nói chuyện ngay.";
     }
 
+    private bool _isIPhoneMode = false;
+    private void SimulateIPhone_Click(object sender, RoutedEventArgs e)
+    {
+        _isIPhoneMode = !_isIPhoneMode;
+        if (_isIPhoneMode)
+        {
+            Width = 390;
+            Height = 844;
+            IPhoneClock.Text = DateTime.Now.ToString("HH:mm");
+            IPhoneHeaderBar.Visibility = Visibility.Visible;
+            IPhoneHomeBar.Visibility = Visibility.Visible;
+            Title = "Lily - AI Assistant (iPhone 15 Pro Frame Mode)";
+            CurrentMsgLabel.Text = "📱 Đã chuyển sang giao diện iPhone 15 Pro giả lập (Dynamic Island + Status Bar + Home Bar).";
+        }
+        else
+        {
+            Width = 440;
+            Height = 720;
+            IPhoneHeaderBar.Visibility = Visibility.Collapsed;
+            IPhoneHomeBar.Visibility = Visibility.Collapsed;
+            Title = "Lily - AI Assistant (.NET 10)";
+            CurrentMsgLabel.Text = "💻 Đã quay lại kích thước màn hình PC Windows mặc định.";
+        }
+    }
+
     private async void HandsFree_Click(object sender, RoutedEventArgs e)
     {
         _vm.HandsFreeMode = !_vm.HandsFreeMode;

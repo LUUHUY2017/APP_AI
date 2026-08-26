@@ -17,15 +17,39 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="52"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="48"/>
             <RowDefinition Height="110"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- IOS DYNAMIC ISLAND & STATUS BAR -->
+        <Border Grid.Row="0" x:Name="IPhoneHeaderBar" Background="#161626" Padding="16,6" Visibility="Collapsed">
+            <Grid>
+                <TextBlock x:Name="IPhoneClock" Text="22:57" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                
+                <!-- DYNAMIC ISLAND PILL -->
+                <Border Width="100" Height="24" Background="Black" CornerRadius="12" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Ellipse Width="8" Height="8" Fill="#1E1E30" Margin="0,0,6,0"/>
+                        <Ellipse Width="6" Height="6" Fill="#0D0D17"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- STATUS ICONS -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="5G" Foreground="White" FontSize="10" FontWeight="Bold" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="📶" Foreground="White" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="🔋 100%" Foreground="White" FontSize="10" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <!-- HEADER -->
-        <Border Grid.Row="0" Background="#161626" Padding="14,0">
+        <Border Grid.Row="1" Background="#161626" Padding="14,0">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <!-- Hands-free mode button -->
@@ -48,6 +72,12 @@
                             Foreground="#8888BB" FontSize="16" Click="RefreshSync_Click" Cursor="Hand" Margin="0,0,4,0">
                         <TextBlock Text="🔄" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                     </Button>
+                    <!-- Simulate iPhone 14/15 Pro button -->
+                    <Button ToolTip="Giả lập kích thước iPhone 14/15 Pro (390x844)"
+                            Width="34" Height="34" Background="Transparent" BorderBrush="Transparent"
+                            Foreground="#8888BB" FontSize="16" Click="SimulateIPhone_Click" Cursor="Hand" Margin="0,0,4,0">
+                        <TextBlock Text="📱" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
                     <!-- Settings button -->
                     <Button ToolTip="Cài đặt"
                             Width="34" Height="34" Background="Transparent" BorderBrush="Transparent"
@@ -64,19 +94,19 @@
         </Border>
 
         <!-- CHAT LOG -->
-        <ScrollViewer Grid.Row="1" x:Name="ChatScroll"
+        <ScrollViewer Grid.Row="2" x:Name="ChatScroll"
                       VerticalScrollBarVisibility="Auto" Background="#0D0D17" Padding="12,8">
             <StackPanel x:Name="ChatStack" Orientation="Vertical"/>
         </ScrollViewer>
 
         <!-- CURRENT STATUS BUBBLE -->
-        <Border Grid.Row="2" Background="#161628" Padding="14,8" MinHeight="36">
+        <Border Grid.Row="3" Background="#161628" Padding="14,8" MinHeight="36">
             <TextBlock x:Name="CurrentMsgLabel" Text="Bấm nút 🎤 để nói (hoặc nói xong tự ngắt)." 
                        TextWrapping="Wrap" FontSize="12" Foreground="#A0A0D0" LineHeight="18"/>
         </Border>
 
         <!-- TEXT INPUT ROW -->
-        <Border Grid.Row="3" Background="#121222" Padding="10,6">
+        <Border Grid.Row="4" Background="#121222" Padding="10,6">
             <DockPanel>
                 <Button Content="Gửi" DockPanel.Dock="Right" Width="60" Height="34"
                         Background="#6B3FCC" Foreground="White" FontWeight="Bold" FontSize="13"
@@ -105,7 +135,7 @@
         </Border>
 
         <!-- BOTTOM: AVATAR + HOLD BUTTON + ABORT -->
-        <Grid Grid.Row="4" Background="#0F0F1E">
+        <Grid Grid.Row="5" Background="#0F0F1E">
             <!-- Avatar pulse ring -->
             <Grid HorizontalAlignment="Left" VerticalAlignment="Center" Margin="16,0,0,0">
                 <Ellipse x:Name="PulseRing" Width="60" Height="60"
@@ -144,5 +174,10 @@
                 <TextBlock Text="⏹ Dừng" Foreground="#CC88FF" FontSize="11"/>
             </Border>
         </Grid>
+
+        <!-- IOS HOME INDICATOR BAR -->
+        <Border Grid.Row="6" x:Name="IPhoneHomeBar" Background="#0F0F1E" Padding="0,4,0,8" Visibility="Collapsed">
+            <Border Width="134" Height="5" Background="#8888AA" CornerRadius="2.5" HorizontalAlignment="Center"/>
+        </Border>
     </Grid>
 </Window>
