@@ -46,6 +46,7 @@ public class XiaozhiWebSocketClient : IProtocol
 
     public event Func<byte[], Task>? OnIncomingAudio;
     public event Func<string, Task>? OnIncomingText;
+    public event Func<string, Task>? OnSttReceived;
     public event Func<string, string?, Task>? OnLlmResponse;
     public event Func<string, Task>? OnTtsStateChanged;
     public event Func<Task>? OnConnected;
@@ -294,8 +295,15 @@ public class XiaozhiWebSocketClient : IProtocol
                     break;
 
                 case "stt":
-                    if (root.TryGetProperty("text", out var sttText) && OnIncomingText != null)
-                        await OnIncomingText.Invoke($"[STT]: {sttText.GetString()}");
+                    if (root.TryGetProperty("text", out var sttText))
+                    {
+                        var textStr = sttText.GetString();
+                        if (!string.IsNullOrEmpty(textStr))
+                        {
+                            if (OnSttReceived != null) await OnSttReceived.Invoke(textStr);
+                            if (OnIncomingText != null) await OnIncomingText.Invoke($"[STT]: {textStr}");
+                        }
+                    }
                     break;
 
                 case "llm":

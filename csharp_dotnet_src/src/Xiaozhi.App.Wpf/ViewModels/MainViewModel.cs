@@ -28,6 +28,7 @@ public class MainViewModel : INotifyPropertyChanged
     private CancellationTokenSource? _connectCts;
     private System.Timers.Timer? _ttsResetTimer;
     private System.Timers.Timer? _requestTimeoutTimer;
+    private string? _lastSentUserText;
 
     private bool _isConnected;
     private bool _isRecording;
@@ -259,6 +260,29 @@ public class MainViewModel : INotifyPropertyChanged
             await Task.CompletedTask;
         };
 
+        _protocolClient.OnSttReceived += async (sttText) =>
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                _requestTimeoutTimer?.Stop();
+                StatusText = "🧠 AI đang suy nghĩ...";
+                CurrentChatMessage = $"🗣️ AI đã nghe: \"{sttText}\"";
+
+                // Thêm bong bóng chat người dùng nếu câu này chưa được gửi trước đó qua khung gõ chữ
+                if (!string.Equals(_lastSentUserText, sttText.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageAdded?.Invoke(new ChatMessage
+                    {
+                        Content = sttText,
+                        Role = "user",
+                        Timestamp = DateTime.Now
+                    });
+                }
+                _lastSentUserText = null;
+            });
+            await Task.CompletedTask;
+        };
+
         _protocolClient.OnLlmResponse += async (text, emotion) =>
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
@@ -362,6 +386,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(text)) return;
         if (!await EnsureConnectedAsync()) return;
 
+        _lastSentUserText = text.Trim();
         MessageAdded?.Invoke(new ChatMessage { Content = text, Role = "user", Timestamp = DateTime.Now });
         StatusText = "🧠 Đang xử lý...";
         CurrentChatMessage = "⏳ Đang gửi câu hỏi...";
@@ -369,7 +394,7 @@ public class MainViewModel : INotifyPropertyChanged
         _requestTimeoutTimer?.Stop();
         _requestTimeoutTimer?.Start();
 
-        if (text.Length <= 12)
+        if (text.Length <= 8)
         {
             await _protocolClient!.SendTextQueryAsync(text);
         }

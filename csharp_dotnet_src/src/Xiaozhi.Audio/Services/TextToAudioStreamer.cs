@@ -1,76 +1,194 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Speech.AudioFormat;
-using System.Speech.Synthesis;
+using System.Net.Http;
 using System.Threading.Tasks;
+using NAudio.Wave;
 using Xiaozhi.Audio.Codecs;
 using Xiaozhi.Protocols.WebSocket;
 
 namespace Xiaozhi.Audio.Services;
 
 /// <summary>
-/// Chuyển đổi câu hỏi dạng văn bản dài thành luồng Opus Audio để gửi lên server Tenclass
-/// Giải quyết triệt để lỗi: "Detect is only for wake words, do not send long texts."
+/// Chuyển đổi câu hỏi dạng văn bản dài thành luồng Opus Audio tiếng Việt chất lượng cao để gửi lên server Tenclass.
+/// Giải quyết triệt để lỗi từ server: "Detect is only for wake words, do not send long texts."
 /// </summary>
 public class TextToAudioStreamer
 {
     private readonly OpusCodec _opusCodec = new();
+    private static readonly HttpClient _httpClient = new();
 
     public async Task StreamTextAsAudioAsync(XiaozhiWebSocketClient client, string text)
     {
         if (string.IsNullOrWhiteSpace(text) || !client.IsConnected) return;
 
-        // 1. Gửi lệnh bắt đầu nghe
-        await client.StartListeningAsync(mode: "manual");
-
-        // 2. Chuyển văn bản thành PCM 16kHz Mono 16-bit
-        byte[] pcmData = SynthesizeToPcm(text);
-
-        if (pcmData.Length > 44) // Bỏ qua header WAV 44 bytes nếu có
+        try
         {
-            int pcmOffset = 44;
-            int bytesPerFrame = 960 * 2; // 60ms @ 16kHz (1920 bytes)
-            var pcmShorts = new short[960];
+            // 1. Tải và tổng hợp PCM 16kHz từ Google TTS (tự động chia nhỏ văn bản dài thành các đoạn <= 150 ký tự)
+            byte[] pcm16k = await FetchVietnameseTtsPcmAsync(text);
 
-            for (int i = pcmOffset; i < pcmData.Length; i += bytesPerFrame)
+            if (pcm16k.Length > 0)
             {
-                int chunkSize = Math.Min(bytesPerFrame, pcmData.Length - i);
-                if (chunkSize < bytesPerFrame)
+                // 2. Gửi lệnh bắt đầu ghi âm lên server
+                await client.StartListeningAsync(mode: "manual");
+                await Task.Delay(200);
+
+                int bytesPerFrame = 960 * 2;
+                var pcmShorts = new short[960];
+
+                // Gửi 4 khung im lặng (lead-in silence ~240ms) để server mở audio pipeline hoàn toàn
+                var silentOpus = _opusCodec.Encode(pcmShorts);
+                for (int s = 0; s < 4; s++)
                 {
-                    Array.Clear(pcmShorts, 0, 960);
-                    Buffer.BlockCopy(pcmData, i, pcmShorts, 0, chunkSize);
-                }
-                else
-                {
-                    Buffer.BlockCopy(pcmData, i, pcmShorts, 0, bytesPerFrame);
+                    if (!client.IsConnected) break;
+                    await client.SendAudioAsync(silentOpus);
+                    await Task.Delay(35);
                 }
 
-                var opusFrame = _opusCodec.Encode(pcmShorts);
-                await client.SendAudioAsync(opusFrame);
-                await Task.Delay(20); // Stream nhịp nhàng
+                // 3. Đóng gói PCM 16kHz Mono thành các frame Opus 60ms và truyền dữ liệu giọng đọc tiếng Việt
+                for (int i = 0; i < pcm16k.Length; i += bytesPerFrame)
+                {
+                    if (!client.IsConnected) break;
+
+                    int chunkSize = Math.Min(bytesPerFrame, pcm16k.Length - i);
+                    Array.Clear(pcmShorts, 0, 960);
+                    Buffer.BlockCopy(pcm16k, i, pcmShorts, 0, chunkSize);
+
+                    var opusFrame = _opusCodec.Encode(pcmShorts);
+                    await client.SendAudioAsync(opusFrame);
+                    await Task.Delay(35); // Giữ nhịp phát 35ms cho frame 60ms
+                }
+
+                // Gửi 3 khung im lặng (lead-out silence ~180ms) trước khi kết thúc
+                Array.Clear(pcmShorts, 0, 960);
+                var trailingSilentOpus = _opusCodec.Encode(pcmShorts);
+                for (int s = 0; s < 3; s++)
+                {
+                    if (!client.IsConnected) break;
+                    await client.SendAudioAsync(trailingSilentOpus);
+                    await Task.Delay(35);
+                }
+
+                // 4. Gửi lệnh kết thúc ghi âm để server tiến hành STT & xử lý LLM
+                await Task.Delay(100);
+                await client.StopListeningAsync();
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            XiaozhiWebSocketClient.Log($"StreamTextAsAudio Exception: {ex.Message}");
+        }
+    }
+
+    private async Task<byte[]> FetchVietnameseTtsPcmAsync(string text)
+    {
+        var chunks = SplitTextIntoChunks(text, 140);
+        using var combinedPcmMs = new MemoryStream();
+
+        foreach (var chunk in chunks)
+        {
+            if (string.IsNullOrWhiteSpace(chunk)) continue;
+            try
+            {
+                var url = $"https://translate.google.com/translate_tts?ie=UTF-8&q={Uri.EscapeDataString(chunk)}&tl=vi&client=tw-ob";
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                req.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+
+                var resp = await _httpClient.SendAsync(req);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var mp3Bytes = await resp.Content.ReadAsByteArrayAsync();
+                    byte[] pcm16k = ConvertMp3ToPcm16k(mp3Bytes);
+                    if (pcm16k.Length > 0)
+                    {
+                        combinedPcmMs.Write(pcm16k, 0, pcm16k.Length);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                XiaozhiWebSocketClient.Log($"FetchTTS Chunk Exception: {ex.Message}");
             }
         }
 
-        // 3. Gửi lệnh kết thúc nghe để server tiến hành xử lý
-        await Task.Delay(100);
-        await client.StopListeningAsync();
+        return combinedPcmMs.ToArray();
     }
 
-    private byte[] SynthesizeToPcm(string text)
+    private List<string> SplitTextIntoChunks(string text, int maxChunkSize)
+    {
+        var result = new List<string>();
+        if (string.IsNullOrWhiteSpace(text)) return result;
+
+        var sentences = text.Split(new[] { '.', '!', '?', '\n', ',', ';', ':', ']', '[' }, StringSplitOptions.RemoveEmptyEntries);
+        var currentChunk = "";
+
+        foreach (var sentence in sentences)
+        {
+            var trimmed = sentence.Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+
+            if ((currentChunk + " " + trimmed).Length > maxChunkSize)
+            {
+                if (!string.IsNullOrEmpty(currentChunk))
+                {
+                    result.Add(currentChunk.Trim());
+                    currentChunk = "";
+                }
+
+                if (trimmed.Length > maxChunkSize)
+                {
+                    var words = trimmed.Split(' ');
+                    foreach (var word in words)
+                    {
+                        if ((currentChunk + " " + word).Length > maxChunkSize)
+                        {
+                            if (!string.IsNullOrEmpty(currentChunk))
+                                result.Add(currentChunk.Trim());
+                            currentChunk = word;
+                        }
+                        else
+                        {
+                            currentChunk += (string.IsNullOrEmpty(currentChunk) ? "" : " ") + word;
+                        }
+                    }
+                }
+                else
+                {
+                    currentChunk = trimmed;
+                }
+            }
+            else
+            {
+                currentChunk += (string.IsNullOrEmpty(currentChunk) ? "" : " ") + trimmed;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(currentChunk))
+        {
+            result.Add(currentChunk.Trim());
+        }
+
+        return result;
+    }
+
+    private byte[] ConvertMp3ToPcm16k(byte[] mp3Bytes)
     {
         try
         {
-            using var synth = new SpeechSynthesizer();
-            using var stream = new MemoryStream();
-            
-            // Format 16kHz 16-bit Mono PCM
-            var format = new SpeechAudioFormatInfo(16000, AudioBitsPerSample.Sixteen, AudioChannel.Mono);
-            synth.SetOutputToAudioStream(stream, format);
-            synth.Rate = 1;
-            synth.Speak(text);
-            synth.SetOutputToNull();
+            using var ms = new MemoryStream(mp3Bytes);
+            using var mp3Reader = new Mp3FileReader(ms);
+            var targetFormat = new WaveFormat(16000, 16, 1);
+            using var resampler = new MediaFoundationResampler(mp3Reader, targetFormat);
 
-            return stream.ToArray();
+            using var outMs = new MemoryStream();
+            var buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = resampler.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                outMs.Write(buffer, 0, bytesRead);
+            }
+            return outMs.ToArray();
         }
         catch
         {
@@ -78,3 +196,4 @@ public class TextToAudioStreamer
         }
     }
 }
+

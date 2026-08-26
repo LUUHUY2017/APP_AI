@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>Xiaozhi.App.Maui</RootNamespace>
+		<UseMaui>true</UseMaui>
+		<SingleProject>true</SingleProject>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<!-- Display name -->
+		<ApplicationTitle>Lily AI Assistant</ApplicationTitle>
+
+		<!-- App Identifier -->
+		<ApplicationId>com.xiaozhi.ai.lily</ApplicationId>
+
+		<!-- Versions -->
+		<ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+		<ApplicationVersion>1</ApplicationVersion>
+
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Xiaozhi.Core\Xiaozhi.Core.csproj" />
+		<ProjectReference Include="..\Xiaozhi.Audio\Xiaozhi.Audio.csproj" />
+		<ProjectReference Include="..\Xiaozhi.Protocols\Xiaozhi.Protocols.csproj" />
+		<ProjectReference Include="..\Xiaozhi.Mcp\Xiaozhi.Mcp.csproj" />
+	</ItemGroup>
+
+</Project>

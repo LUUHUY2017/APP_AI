@@ -1,0 +1,33 @@
+name: Build iOS App (.ipa)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Install .NET MAUI Workloads
+      run: dotnet workload install maui-ios
+
+    - name: Build and Publish MAUI iOS App
+      run: |
+        cd csharp_dotnet_src
+        dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net10.0-ios /p:ArchiveOnBuild=true /p:BuildIpa=true
+
+    - name: Upload iOS IPA Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Lily-AI-iOS-App
+        path: csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net10.0-ios/ios-arm64/*.ipa

@@ -10,7 +10,6 @@
 *.pyc
 
 # Installers & Large temp extracted dirs
-*.exe
 {app}/
 Lily.exe_extracted/
 *.iss

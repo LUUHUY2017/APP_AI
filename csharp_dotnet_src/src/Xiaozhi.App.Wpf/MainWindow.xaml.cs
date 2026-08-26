@@ -9,6 +9,7 @@ using System.Windows.Media.Animation;
 using Xiaozhi.App.Wpf.ViewModels;
 using Xiaozhi.App.Wpf.Views;
 using Xiaozhi.Core.Models;
+using Xiaozhi.Plugins;
 
 namespace Xiaozhi.App.Wpf;
 
@@ -17,6 +18,7 @@ public partial class MainWindow : Window
     private readonly MainViewModel _vm;
     private bool _isRecordingActive = false;
     private Stopwatch _pressTimer = new();
+    private readonly GlobalShortcutPlugin _shortcutPlugin = new();
 
     public MainWindow()
     {
@@ -24,7 +26,21 @@ public partial class MainWindow : Window
         _vm = (MainViewModel)DataContext;
         _vm.PropertyChanged += Vm_PropertyChanged;
         _vm.MessageAdded += OnMessageAdded;
-        Loaded += async (s, e) => await _vm.InitializeAsync();
+        Loaded += async (s, e) =>
+        {
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            _shortcutPlugin.RegisterWindow(handle);
+            _shortcutPlugin.OnManualTalkTriggered += async () =>
+            {
+                if (!_isRecordingActive) await _vm.StartListeningAsync();
+                else await _vm.StopListeningAsync();
+            };
+            _shortcutPlugin.OnAutoTalkToggled += () => HandsFree_Click(this, new RoutedEventArgs());
+            _shortcutPlugin.OnAbortTriggered += () => _ = _vm.AbortAsync();
+
+            await _vm.InitializeAsync();
+        };
+        Unloaded += (s, e) => _ = _shortcutPlugin.ShutdownAsync();
     }
 
     private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
