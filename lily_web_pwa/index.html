@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Lily - Trợ Lý Ảo AI</title>
+
+  <!-- iOS Meta Tags for PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lily AI">
+  <meta name="theme-color" content="#161626">
+
+  <!-- Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div id="app-container">
+    <!-- HEADER -->
+    <header>
+      <div class="status-group">
+        <div id="status-dot" class="status-dot"></div>
+        <div id="status-text" class="status-text">Đang kết nối...</div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-hands-free" class="btn-pill" title="Chế độ rảnh tay liên tục">🎙️ Rảnh tay: Tắt</button>
+        <button id="btn-refresh" class="btn-icon" title="Đồng bộ cấu hình từ web">🔄</button>
+        <button id="btn-settings" class="btn-icon" title="Cài đặt">⚙</button>
+      </div>
+    </header>
+
+    <!-- CHAT LOG CONTAINER -->
+    <div id="chat-container">
+      <div class="chat-bubble ai">
+        <span class="author">🌸 Lily</span>
+        Xin chào! Mình là Lily, trợ lý AI giọng nói thông minh. Bấm nút 🎤 bên dưới để trò chuyện cùng mình nhé!
+      </div>
+    </div>
+
+    <!-- CURRENT MESSAGE BAR -->
+    <div id="current-msg-bar">Bấm nút 🎤 để nói, hoặc gõ tin nhắn bất kỳ bên dưới.</div>
+
+    <!-- TEXT INPUT BAR -->
+    <div id="input-bar">
+      <input type="text" id="text-input" placeholder="Gõ câu hỏi vào đây..." autocomplete="off" autocorrect="off">
+      <button id="btn-send" class="btn-send">Gửi</button>
+    </div>
+
+    <!-- BOTTOM CONTROLS -->
+    <div id="bottom-controls">
+      <!-- Avatar -->
+      <div class="avatar-container">
+        <div id="avatar-ring" class="avatar-ring"></div>
+        <div class="avatar-box">
+          <span id="avatar-emoji">🌸</span>
+        </div>
+      </div>
+
+      <!-- Talk Button -->
+      <div class="talk-btn-wrapper">
+        <span class="talk-hint">👇 Bấm để nói (nói xong tự gửi)</span>
+        <button id="talk-btn" class="talk-btn">
+          <span id="talk-btn-icon">🎤</span>
+          <span id="talk-btn-text">Bấm để nói</span>
+        </button>
+      </div>
+
+      <!-- Abort Button -->
+      <button id="btn-abort" class="btn-abort">⏹ Dừng</button>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-title">
+          <span>⚙ Cài Đặt Kết Nối</span>
+        </div>
+        <div class="form-group">
+          <label>WebSocket URL</label>
+          <input type="text" id="cfg-ws-url">
+        </div>
+        <div class="form-group">
+          <label>Mã thiết bị (Device ID / MAC)</label>
+          <input type="text" id="cfg-device-id">
+        </div>
+        <div class="form-group">
+          <label>Token xác thực (Access Token)</label>
+          <input type="text" id="cfg-token">
+        </div>
+        <div class="modal-actions">
+          <button id="btn-close-settings" class="btn-pill">Đóng</button>
+          <button id="btn-save-settings" class="btn-send">Lưu Cấu Hình</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/app.js"></script>
+</body>
+</html>
