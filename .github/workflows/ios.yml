@@ -27,7 +27,7 @@ jobs:
     - name: Build and Publish MAUI iOS App
       run: |
         cd csharp_dotnet_src
-        dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false
+        dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false
 
     - name: Upload iOS IPA Artifact
       uses: actions/upload-artifact@v4
