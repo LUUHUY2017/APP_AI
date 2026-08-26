@@ -21,8 +21,10 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly NAudioAudioService _audioService;
     private readonly OpusCodec _opusCodec;
     private readonly TextToAudioStreamer _textStreamer = new();
+    private readonly VoiceActivityDetector _vad = new();
     private readonly HttpClient _httpClient = new();
     private bool _isListening = false;
+    private bool _handsFreeMode = false;
     private CancellationTokenSource? _connectCts;
     private System.Timers.Timer? _ttsResetTimer;
     private System.Timers.Timer? _requestTimeoutTimer;
@@ -31,7 +33,7 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isRecording;
     private bool _isSpeaking;
     private string _statusText = "✅ Sẵn sàng";
-    private string _currentChatMessage = "Bấm nút 🎤 để nói, hoặc gõ tin nhắn bất kỳ bên dưới.";
+    private string _currentChatMessage = "Bấm 🎤 để nói (hoặc nói xong tự ngắt).";
 
     public bool IsConnected
     {
@@ -49,6 +51,12 @@ public class MainViewModel : INotifyPropertyChanged
     {
         get => _isSpeaking;
         set { _isSpeaking = value; OnPropertyChanged(); }
+    }
+
+    public bool HandsFreeMode
+    {
+        get => _handsFreeMode;
+        set { _handsFreeMode = value; OnPropertyChanged(); }
     }
 
     public string StatusText
@@ -71,18 +79,37 @@ public class MainViewModel : INotifyPropertyChanged
         _audioService = new NAudioAudioService();
         _audioService.OnAudioRecorded += OnAudioCaptured;
 
+        // VAD tự động ngắt và gửi câu hỏi khi người dùng dừng nói (im lặng > 1.2s)
+        _vad.OnSpeechEnded += () =>
+        {
+            if (_isListening && IsRecording)
+            {
+                System.Windows.Application.Current?.Dispatcher.Invoke(async () =>
+                {
+                    await StopListeningAsync();
+                });
+            }
+        };
+
         // Auto-reset speaking state after audio finishes
         _ttsResetTimer = new System.Timers.Timer(3000) { AutoReset = false };
         _ttsResetTimer.Elapsed += (s, e) =>
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            System.Windows.Application.Current?.Dispatcher.Invoke(async () =>
             {
                 IsSpeaking = false;
                 if (!IsRecording) StatusText = "✅ Sẵn sàng";
+
+                // Trong chế độ Hands-Free: Tự động sẵn sàng lắng nghe câu tiếp theo
+                if (HandsFreeMode && !IsRecording)
+                {
+                    await Task.Delay(500);
+                    await StartListeningAsync();
+                }
             });
         };
 
-        // Safety timeout for requests (reset UI if server doesn't respond in 15s)
+        // Safety timeout for requests
         _requestTimeoutTimer = new System.Timers.Timer(15000) { AutoReset = false };
         _requestTimeoutTimer.Elapsed += (s, e) =>
         {
@@ -102,6 +129,9 @@ public class MainViewModel : INotifyPropertyChanged
         if (!_isListening || _protocolClient?.IsConnected != true) return;
         try
         {
+            // Xử lý VAD phát hiện im lặng
+            _vad.ProcessPcm(pcmBytes);
+
             var pcmShorts = new short[pcmBytes.Length / 2];
             Buffer.BlockCopy(pcmBytes, 0, pcmShorts, 0, pcmBytes.Length);
             var opusData = _opusCodec.Encode(pcmShorts);
@@ -298,11 +328,12 @@ public class MainViewModel : INotifyPropertyChanged
     {
         if (!await EnsureConnectedAsync()) return;
 
+        _vad.Reset();
         _isListening = true;
         IsRecording = true;
         IsSpeaking = false;
         StatusText = "🎤 Đang nghe...";
-        CurrentChatMessage = "🎤 Đang ghi âm giọng nói của bạn... Hãy nói câu hỏi.";
+        CurrentChatMessage = "🎤 Đang lắng nghe... Nói xong AI sẽ tự động gửi.";
         _ttsResetTimer?.Stop();
         _requestTimeoutTimer?.Stop();
 
@@ -317,7 +348,7 @@ public class MainViewModel : INotifyPropertyChanged
         _audioService.StopRecording();
         IsRecording = false;
         StatusText = "🧠 Đang xử lý...";
-        CurrentChatMessage = "⏳ Đang gửi giọng nói lên AI...";
+        CurrentChatMessage = "⏳ Đang xử lý câu trả lời...";
 
         _requestTimeoutTimer?.Stop();
         _requestTimeoutTimer?.Start();
@@ -338,8 +369,6 @@ public class MainViewModel : INotifyPropertyChanged
         _requestTimeoutTimer?.Stop();
         _requestTimeoutTimer?.Start();
 
-        // Với văn bản ngắn <= 12 ký tự: gửi detect trực tiếp
-        // Với văn bản dài > 12 ký tự: stream dưới dạng Opus Audio để vượt qua giới hạn của server
         if (text.Length <= 12)
         {
             await _protocolClient!.SendTextQueryAsync(text);

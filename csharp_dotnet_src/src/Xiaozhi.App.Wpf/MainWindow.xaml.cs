@@ -51,8 +51,23 @@ public partial class MainWindow : Window
                     AvatarEmoji.Text = _vm.IsSpeaking ? "💬" : "🌸";
                     AbortBtnBorder.Visibility = _vm.IsSpeaking ? Visibility.Visible : Visibility.Collapsed;
                     break;
+                case nameof(_vm.HandsFreeMode):
+                    UpdateHandsFreeUI(_vm.HandsFreeMode);
+                    break;
             }
         });
+    }
+
+    private void UpdateHandsFreeUI(bool enabled)
+    {
+        var label = (TextBlock?)HandsFreeBtn.Template.FindName("HandsFreeLabel", HandsFreeBtn);
+        if (label != null)
+        {
+            label.Text = enabled ? "🎙️ Rảnh tay: BẬT" : "🎙️ Rảnh tay: Tắt";
+        }
+        HandsFreeBtn.Background = enabled
+            ? new SolidColorBrush(Color.FromRgb(80, 30, 150))
+            : new SolidColorBrush(Color.FromRgb(34, 34, 56));
     }
 
     private void UpdateRecordingUI(bool recording)
@@ -62,9 +77,9 @@ public partial class MainWindow : Window
         {
             TalkBtnBorder.Background = new SolidColorBrush(Color.FromRgb(220, 40, 70));
             TalkBtnIcon.Text = "⏹";
-            TalkBtnLabel.Text = "Bấm để gửi";
-            TalkHintLabel.Text = "🔴 Đang nghe... Bấm lại để gửi";
-            CurrentMsgLabel.Text = "🎤 Đang lắng nghe giọng nói của bạn...";
+            TalkBtnLabel.Text = "Đang nghe...";
+            TalkHintLabel.Text = "🔴 Đang nghe... Nói xong AI sẽ tự gửi";
+            CurrentMsgLabel.Text = "🎤 Đang lắng nghe... Nói xong dừng lại 1s để AI trả lời.";
 
             var pulse = new DoubleAnimation(0.0, 0.9, new Duration(TimeSpan.FromMilliseconds(500)))
             {
@@ -77,7 +92,7 @@ public partial class MainWindow : Window
             TalkBtnBorder.Background = new SolidColorBrush(Color.FromRgb(107, 63, 204));
             TalkBtnIcon.Text = "🎤";
             TalkBtnLabel.Text = "Bấm để nói";
-            TalkHintLabel.Text = "👇 Bấm 1 lần để nói (hoặc giữ để nói)";
+            TalkHintLabel.Text = "👇 Bấm để nói (nói xong tự gửi)";
             PulseRing.BeginAnimation(OpacityProperty, null);
             PulseRing.Opacity = 0;
         }
@@ -130,17 +145,17 @@ public partial class MainWindow : Window
         });
     }
 
-    private void TalkBtn_MouseDown(object sender, MouseButtonEventArgs e)
+    private async void TalkBtn_MouseDown(object sender, MouseButtonEventArgs e)
     {
         _pressTimer.Restart();
 
         if (!_isRecordingActive)
         {
-            _ = _vm.StartListeningAsync();
+            await _vm.StartListeningAsync();
         }
         else
         {
-            _ = _vm.StopListeningAsync();
+            await _vm.StopListeningAsync();
         }
         e.Handled = true;
     }
@@ -216,9 +231,24 @@ public partial class MainWindow : Window
 
     private async void RefreshSync_Click(object sender, RoutedEventArgs e)
     {
-        StatusLabel.Text = "🔄 Đang đồng bộ web...";
-        CurrentMsgLabel.Text = "⏳ Đang kéo cấu hình mới nhất từ trang web xiaozhi.me...";
+        StatusLabel.Text = "🔄 Đang đồng bộ...";
+        CurrentMsgLabel.Text = "⏳ Đang kéo cấu hình mới nhất từ web xiaozhi.me...";
         await _vm.ReconnectAsync();
         CurrentMsgLabel.Text = "✅ Đã đồng bộ cấu hình thành công! Bạn có thể nói chuyện ngay.";
+    }
+
+    private async void HandsFree_Click(object sender, RoutedEventArgs e)
+    {
+        _vm.HandsFreeMode = !_vm.HandsFreeMode;
+        if (_vm.HandsFreeMode)
+        {
+            CurrentMsgLabel.Text = "🎙️ Đã BẬT chế độ Rảnh tay! Bạn chỉ cần nói, AI sẽ tự động trả lời liên tục.";
+            await _vm.StartListeningAsync();
+        }
+        else
+        {
+            CurrentMsgLabel.Text = "🎙️ Đã tắt chế độ Rảnh tay.";
+            if (_vm.IsRecording) await _vm.StopListeningAsync();
+        }
     }
 }
