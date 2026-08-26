@@ -20,6 +20,7 @@ public class MainViewModel : INotifyPropertyChanged
     private XiaozhiWebSocketClient? _protocolClient;
     private readonly NAudioAudioService _audioService;
     private readonly OpusCodec _opusCodec;
+    private readonly TextToAudioStreamer _textStreamer = new();
     private readonly HttpClient _httpClient = new();
     private bool _isListening = false;
     private CancellationTokenSource? _connectCts;
@@ -30,7 +31,7 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isRecording;
     private bool _isSpeaking;
     private string _statusText = "✅ Sẵn sàng";
-    private string _currentChatMessage = "Bấm nút 🎤 để nói chuyện với AI...";
+    private string _currentChatMessage = "Bấm nút 🎤 để nói, hoặc gõ tin nhắn bất kỳ bên dưới.";
 
     public bool IsConnected
     {
@@ -81,15 +82,15 @@ public class MainViewModel : INotifyPropertyChanged
             });
         };
 
-        // Safety timeout for requests (reset UI if server doesn't respond in 8s)
-        _requestTimeoutTimer = new System.Timers.Timer(8000) { AutoReset = false };
+        // Safety timeout for requests (reset UI if server doesn't respond in 15s)
+        _requestTimeoutTimer = new System.Timers.Timer(15000) { AutoReset = false };
         _requestTimeoutTimer.Elapsed += (s, e) =>
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 if (CurrentChatMessage.StartsWith("⏳"))
                 {
-                    CurrentChatMessage = "💡 Hãy bấm nút 🎤 và nói bằng giọng nói để AI trả lời tốt nhất!";
+                    CurrentChatMessage = "Bấm nút 🎤 để nói hoặc gõ câu hỏi tiếp theo...";
                     StatusText = "✅ Sẵn sàng";
                 }
             });
@@ -223,16 +224,7 @@ public class MainViewModel : INotifyPropertyChanged
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 _requestTimeoutTimer?.Stop();
-                if (text.StartsWith("[Thông báo]:"))
-                {
-                    // Server alert for long text detect
-                    CurrentChatMessage = "💡 Server Xiaozhi là AI thoại. Hãy bấm nút 🎤 để nói trực tiếp bằng giọng nói!";
-                    StatusText = "✅ Sẵn sàng";
-                }
-                else
-                {
-                    StatusText = text;
-                }
+                StatusText = text;
             });
             await Task.CompletedTask;
         };
@@ -346,7 +338,26 @@ public class MainViewModel : INotifyPropertyChanged
         _requestTimeoutTimer?.Stop();
         _requestTimeoutTimer?.Start();
 
-        await _protocolClient!.SendTextQueryAsync(text);
+        // Với văn bản ngắn <= 12 ký tự: gửi detect trực tiếp
+        // Với văn bản dài > 12 ký tự: stream dưới dạng Opus Audio để vượt qua giới hạn của server
+        if (text.Length <= 12)
+        {
+            await _protocolClient!.SendTextQueryAsync(text);
+        }
+        else
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _textStreamer.StreamTextAsAudioAsync(_protocolClient!, text);
+                }
+                catch (Exception ex)
+                {
+                    XiaozhiWebSocketClient.Log($"StreamTextAsAudio Exception: {ex.Message}");
+                }
+            });
+        }
     }
 
     public async Task AbortAsync()
