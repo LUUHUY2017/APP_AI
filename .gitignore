@@ -17,7 +17,7 @@ Lily.exe_extracted/
 
 # Publish outputs & Large Binaries
 publish/
-publish_output/
-*.exe
+#publish_output/
+.exe
 *.pdb
 
