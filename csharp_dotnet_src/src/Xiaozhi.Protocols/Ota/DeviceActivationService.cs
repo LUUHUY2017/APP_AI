@@ -18,6 +18,8 @@ public class ActivationResult
     public string? Token { get; set; }
     public string? WebSocketUrl { get; set; }
     public string? Message { get; set; }
+    public string? RawRequest { get; set; }
+    public string? RawResponse { get; set; }
 }
 
 public class DeviceActivationService
@@ -32,9 +34,15 @@ public class DeviceActivationService
 
     public async Task<ActivationResult> CheckOrRequestActivationAsync(string deviceId, string macAddress)
     {
+        var result = new ActivationResult();
         try
         {
-            var cleanMac = macAddress.Replace(":", "").Replace("-", "").ToLowerInvariant();
+            var rawMac = macAddress.Replace(":", "").Replace("-", "").ToLowerInvariant();
+            if (rawMac.Length == 12)
+            {
+                macAddress = string.Join(":", Enumerable.Range(0, 6).Select(i => rawMac.Substring(i * 2, 2)));
+            }
+
             var payload = new
             {
                 application = new
@@ -46,27 +54,29 @@ public class DeviceActivationService
                 {
                     type = SystemConstants.BoardType,
                     name = SystemConstants.AppName,
-                    ip = "192.168.1.100",
-                    mac = macAddress,
-                    serial_number = cleanMac
-                },
-                serial_number = cleanMac,
-                mac = macAddress
+                    ip = GetLocalIpAddress(),
+                    mac = macAddress
+                }
             };
 
-            var jsonContent = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+            var jsonBody = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+            var jsonContent = new StringContent(jsonBody, Encoding.UTF8, "application/json");
             var request = new HttpRequestMessage(HttpMethod.Post, _otaUrl)
             {
                 Content = jsonContent
             };
-            request.Headers.Add("Device-Id", cleanMac);
+            request.Headers.Add("Device-Id", macAddress);
             request.Headers.Add("Client-Id", deviceId);
             request.Headers.Add("User-Agent", $"{SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}");
             request.Headers.Add("Accept-Language", "zh-CN");
             request.Headers.Add("Activation-Version", SystemConstants.AppVersion);
 
+            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
+
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
+
+            result.RawResponse = $"HTTP {(int)response.StatusCode} {response.StatusCode}\nBody:\n{responseBody}";
 
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;
@@ -134,5 +144,22 @@ public class DeviceActivationService
         }
 
         return null;
+    }
+
+    private static string GetLocalIpAddress()
+    {
+        try
+        {
+            var host = System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(ip))
+                {
+                    return ip.ToString();
+                }
+            }
+        }
+        catch { }
+        return "192.168.1.100";
     }
 }

@@ -50,6 +50,16 @@
                         <Button Grid.Column="1" x:Name="OpenActiveWebBtn" Text="🌐 Mở Web Kích hoạt" BackgroundColor="#222044" TextColor="#8e94f7" 
                                 CornerRadius="8" HeightRequest="40" FontSize="13" Clicked="OnOpenActiveWebClicked" IsEnabled="False" />
                     </Grid>
+
+                    <!-- Debug OTA Log Box (Displaying Sent JSON Request & Received JSON Response Live) -->
+                    <VerticalStackLayout Spacing="4" Margin="0,6,0,0">
+                        <Label Text="📜 Nhật ký Gói tin OTA (Request &amp; Response):" FontSize="11" TextColor="#a0a0ff" FontAttributes="Bold" />
+                        <Frame BackgroundColor="#090814" CornerRadius="8" Padding="8" HasShadow="False" BorderColor="#2a254d">
+                            <Editor x:Name="OtaLogEditor" Text="Bấm 'Tạo mã OTP' để xem chi tiết gói tin gửi đi và phản hồi từ Server..." 
+                                    FontSize="11" TextColor="#00FFC8" FontFamily="Courier" IsReadOnly="True" 
+                                    HeightRequest="120" AutoSize="Disabled" BackgroundColor="Transparent" />
+                        </Frame>
+                    </VerticalStackLayout>
                 </VerticalStackLayout>
             </Frame>
 

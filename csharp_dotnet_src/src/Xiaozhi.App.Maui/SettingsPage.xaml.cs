@@ -55,6 +55,8 @@ public partial class SettingsPage : ContentPage
 
         var result = await _activationService.CheckOrRequestActivationAsync(deviceId, macAddress);
 
+        OtaLogEditor.Text = $"📤 GÓI TIN GỬI ĐI (REQUEST):\n{result.RawRequest}\n\n📥 PHẢN HỒI NGUYÊN VĂN TỪ SERVER (RESPONSE):\n{result.RawResponse}";
+
         if (result.IsActivated && !string.IsNullOrEmpty(result.Token))
         {
             TokenEntry.Text = result.Token;
