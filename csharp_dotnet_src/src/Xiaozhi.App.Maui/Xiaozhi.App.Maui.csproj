@@ -9,6 +9,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<SkipValidateMauiImplicitPackageReferences>true</SkipValidateMauiImplicitPackageReferences>
+		<CheckEolWorkloads>false</CheckEolWorkloads>
 
 		<!-- Display name -->
 		<ApplicationTitle>Lily AI Assistant</ApplicationTitle>
