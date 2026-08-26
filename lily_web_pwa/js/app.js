@@ -144,7 +144,19 @@ class LilyPWA {
 
     this.setStatus('Đang kết nối...', false);
     try {
-      this.ws = new WebSocket(CONFIG.wsUrl);
+      let url = CONFIG.wsUrl;
+      const params = [];
+      if (CONFIG.token) params.push(`token=${encodeURIComponent(CONFIG.token)}`);
+      if (CONFIG.deviceId) params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
+      if (CONFIG.clientId) params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
+      params.push(`protocol_version=2`);
+
+      if (params.length > 0) {
+        url += (url.includes('?') ? '&' : '?') + params.join('&');
+      }
+
+      console.log('Connecting to WebSocket URL:', url);
+      this.ws = new WebSocket(url);
       this.ws.binaryType = 'arraybuffer';
 
       this.ws.onopen = () => {
@@ -155,17 +167,23 @@ class LilyPWA {
 
       this.ws.onmessage = (event) => {
         if (typeof event.data === 'string') {
-          this.handleJsonMessage(JSON.parse(event.data));
+          try {
+            this.handleJsonMessage(JSON.parse(event.data));
+          } catch (e) {
+            console.error('JSON parse error:', e);
+          }
         } else if (event.data instanceof ArrayBuffer) {
           this.handleBinaryAudio(event.data);
         }
       };
 
-      this.ws.onclose = () => {
+      this.ws.onclose = (ev) => {
         this.isConnected = false;
         this.setStatus('Mất kết nối', false);
+        console.warn('WebSocket Closed Code:', ev.code, 'Reason:', ev.reason);
         // Auto-reconnect after 3s
-        setTimeout(() => this.connect(), 3000);
+        if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = setTimeout(() => this.connect(), 3000);
       };
 
       this.ws.onerror = (err) => {
@@ -173,6 +191,7 @@ class LilyPWA {
       };
     } catch (e) {
       console.error('Connect failed:', e);
+      this.setStatus('Lỗi kết nối', false);
     }
   }
 
@@ -377,6 +396,9 @@ class LilyPWA {
         state: "detect",
         text: text
       }));
+    } else {
+      this.currentMsgBar.innerText = '⚠️ Mất kết nối server. Đang thử kết nối lại...';
+      this.connect();
     }
   }
 
