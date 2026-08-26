@@ -1,0 +1,12 @@
+{
+  "mac_address": "90:2b:34:be:b5:6a",
+  "serial_number": "SN-E42751F1-902b34beb56a",
+  "hmac_key": "3f452a4a933cc8870713e9f0f7edcb6bd7a7dce869d910b1ff6ec582657667fc",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "DESKTOP-QRPKM1B",
+    "mac_address": "90:2b:34:be:b5:6a",
+    "machine_id": "fd70c1f1-6ca0-4e99-93e3-fbd30afe1007"
+  }
+}

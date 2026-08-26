@@ -1,0 +1,12 @@
+{
+  "mac_address": "40:e2:30:a5:fe:0a",
+  "serial_number": "SN-6800B1D0-40e230a5fe0a",
+  "hmac_key": "a3bde0bea7b33b9d7911817beac15c981b515b5b6efed1b0200e32e46d73d0a5",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "Tran",
+    "mac_address": "40:e2:30:a5:fe:0a",
+    "machine_id": "2cae6ae5-de8a-4731-bdd9-4496f8b7fb17"
+  }
+}

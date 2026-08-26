@@ -1,0 +1,12 @@
+{
+  "mac_address": "f0:1d:bc:8a:5e:54",
+  "serial_number": "SN-AA96C7C0-f01dbc8a5e54",
+  "hmac_key": "ae582af0f1062d60f8d72bf7397ad3737bdddc602b4fd7002b5000a6f4ce12ef",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "DESKTOP-1OAOC5F",
+    "mac_address": "f0:1d:bc:8a:5e:54",
+    "machine_id": "e672f692-ded2-4a20-9a9c-569150dcbf0c"
+  }
+}

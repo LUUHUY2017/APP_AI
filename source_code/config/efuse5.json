@@ -1,0 +1,12 @@
+{
+  "mac_address": "94:de:80:c6:eb:b5",
+  "serial_number": "SN-37C4CDFB-94de80c6ebb5",
+  "hmac_key": "7da7883ac48f4e4dd09d8836e28f83deffec5108c5f033813d7b07a06e71b5d4",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "DESKTOP-7E05KTP",
+    "mac_address": "94:de:80:c6:eb:b5",
+    "machine_id": "12614d42-adc5-44bc-9ba7-6355066e3c79"
+  }
+}

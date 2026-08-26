@@ -1,0 +1,103 @@
+[
+  {
+    "name": "Junsen Huang",
+    "title": "Người khởi xướng py-xiaozhi & Lập trình viên cốt lõi",
+    "company": "Công ty Trí tuệ nhân tạo Southern Power Grid, Kỹ sư Frontend",
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "projects": [
+      {
+        "label": "py-xiaozhi",
+        "url": "https://github.com/huangjunsen0406/py-xiaozhi"
+      },
+      {
+        "label": "UnifyPy",
+        "url": "https://github.com/huangjunsen0406/UnifyPy"
+      },
+      {
+        "label": "xiaozhi-esp32-server",
+        "url": "https://github.com/xinnan-tech/xiaozhi-esp32-server"
+      },
+      {
+        "label": "xiaozhi-mcphub",
+        "url": "https://github.com/huangjunsen0406/xiaozhi-mcphub"
+      }
+    ],
+    "socials": {
+      "github": "huangjunsen0406"
+    },
+    "website": {
+      "label": "https://junsen.online",
+      "url": "https://junsen.online"
+    }
+  },
+  {
+    "name": "ASLant",
+    "title": "Lập trình viên cốt lõi, Phát triển giao diện PyQt5, Tương thích nhúng",
+    "company": "Công ty Công nghệ số Qingcheng Sơn Đông, Kỹ sư phần mềm nhúng",
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "projects": [],
+    "socials": {
+      "github": "Y-ASLant"
+    },
+    "website": {
+      "label": "aslant.top",
+      "url": "https://aslant.top/"
+    }
+  },
+  {
+    "name": "fengzai6",
+    "title": "Lập trình viên cốt lõi giai đoạn đầu",
+    "company": "Công ty Huading Zhongshan, Kỹ sư Frontend",
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "projects": [],
+    "socials": {
+      "github": "fengzai6"
+    }
+  },
+  {
+    "name": "Cal And Nong",
+    "title": "Người đóng góp tài liệu",
+    "company": "Tencent, Kỹ sư Frontend",
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "projects": [],
+    "socials": {
+      "github": "calandnong"
+    }
+  },
+  {
+    "name": "vonweller",
+    "title": "Người đóng góp chức năng hình ảnh",
+    "projects": [],
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "socials": {
+      "github": "vonweller"
+    }
+  },
+  {
+    "name": "gaochuang",
+    "title": "Kỹ sư phát triển nền tảng cao cấp",
+    "company": "Nokia Communications Technology",
+    "projects": [],
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "socials": {
+      "github": "gaochuang"
+    }
+  },
+  {
+    "name": "wupengya",
+    "title": "Kỹ sư Backend",
+    "company": "Công ty Trí tuệ nhân tạo Southern Power Grid",
+    "projects": [],
+    "location": "Trung Quốc",
+    "languages": ["Tiếng Trung"],
+    "socials": {
+      "github": "wupengya"
+    }
+  }
+]

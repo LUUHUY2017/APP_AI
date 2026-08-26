@@ -1,0 +1,12 @@
+{
+  "mac_address": "40:8d:5c:33:e6:52",
+  "serial_number": "SN-7EE8C8DF-408d5c33e652",
+  "hmac_key": "ae5f7024feb2d4a43978631104a6562176fb04198c36fbfe7f5174341dfb5cf6",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "Admin-PC",
+    "mac_address": "40:8d:5c:33:e6:52",
+    "machine_id": "57e6a73f-c174-49ec-9854-b82da572da8f"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "mac_address": "b0:83:fe:7f:f9:f3",
+  "serial_number": "SN-4635B669-b083fe7ff9f3",
+  "hmac_key": "bba0e1bf3ab2badaa2ee90154b2074d2bb419cef8aadd1a359f9c337e6df51ac",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "DESKTOP-OUEM09E",
+    "mac_address": "b0:83:fe:7f:f9:f3",
+    "machine_id": "9ac3dfb8-1d6e-498b-8524-33987ab8b35e"
+  }
+}

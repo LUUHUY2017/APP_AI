@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xiaozhi.Core\Xiaozhi.Core.csproj" />
+    <ProjectReference Include="..\Xiaozhi.Audio\Xiaozhi.Audio.csproj" />
+    <ProjectReference Include="..\Xiaozhi.Protocols\Xiaozhi.Protocols.csproj" />
+    <ProjectReference Include="..\Xiaozhi.Mcp\Xiaozhi.Mcp.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

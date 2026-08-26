@@ -1,0 +1,12 @@
+{
+  "mac_address": "94:de:80:15:ce:03",
+  "serial_number": "SN-DB2A87C7-94de8015ce03",
+  "hmac_key": "95cf108a511cf1cbdb0a05af7b3a840cd2719e25db3f838aa7e35ed0dfbae22d",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "PC-ThienChi",
+    "mac_address": "94:de:80:15:ce:03",
+    "machine_id": "e7ef0336-3bc8-463c-8e6d-e0851a28b7d4"
+  }
+}

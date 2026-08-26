@@ -1,0 +1,358 @@
+using System;
+using System.Buffers.Binary;
+using System.IO;
+using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Xiaozhi.Core.Interfaces;
+using Xiaozhi.Core.Models;
+
+namespace Xiaozhi.Protocols.WebSocket;
+
+/// <summary>
+/// WebSocket Client chuẩn sử dụng ClientWebSocket gốc của .NET 10.
+/// Ổn định tuyệt đối, không phụ thuộc third-party reactive wrapper gây vòng lặp reconnect.
+/// </summary>
+public class XiaozhiWebSocketClient : IProtocol
+{
+    private ClientWebSocket? _ws;
+    private readonly string _serverUrl;
+    private readonly string _token;
+    private readonly string _deviceId;
+    private readonly string _clientId;
+    private string? _sessionId;
+    private CancellationTokenSource? _cts;
+    private readonly SemaphoreSlim _sendLock = new(1, 1);
+
+    private static readonly string LogFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "XiaozhiLily", "ws_traffic.log");
+
+    public static void Log(string msg)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LogFile)!);
+            File.AppendAllText(LogFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n");
+        }
+        catch { }
+    }
+
+    public string? SessionId => _sessionId;
+
+    public event Func<byte[], Task>? OnIncomingAudio;
+    public event Func<string, Task>? OnIncomingText;
+    public event Func<string, string?, Task>? OnLlmResponse;
+    public event Func<string, Task>? OnTtsStateChanged;
+    public event Func<Task>? OnConnected;
+    public event Func<string, Task>? OnDisconnected;
+    public event Func<Exception, Task>? OnError;
+
+    public bool IsConnected => _ws != null && _ws.State == WebSocketState.Open;
+
+    public XiaozhiWebSocketClient(string serverUrl, string token, string deviceId, string clientId)
+    {
+        _serverUrl = serverUrl;
+        _token = token;
+        _deviceId = deviceId;
+        _clientId = clientId;
+    }
+
+    public async Task ConnectAsync(CancellationToken cancellationToken = default)
+    {
+        await DisconnectAsync();
+
+        _cts = new CancellationTokenSource();
+        _ws = new ClientWebSocket();
+        _ws.Options.SetRequestHeader("Authorization", $"Bearer {_token}");
+        _ws.Options.SetRequestHeader("Device-Id", _deviceId);
+        _ws.Options.SetRequestHeader("Client-Id", _clientId);
+        _ws.Options.SetRequestHeader("Protocol-Version", "3");
+        _ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+
+        var uri = new Uri(_serverUrl);
+        Log($"Connecting to {uri} ...");
+
+        await _ws.ConnectAsync(uri, cancellationToken);
+        Log($"WebSocket Connected! State={_ws.State}");
+
+        // Start background receive loop
+        _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
+
+        // Send Hello Handshake
+        await SendHelloHandshakeAsync();
+    }
+
+    private async Task ReceiveLoopAsync(CancellationToken ct)
+    {
+        var buffer = new byte[32 * 1024]; // 32KB buffer
+
+        try
+        {
+            while (!ct.IsCancellationRequested && _ws != null && _ws.State == WebSocketState.Open)
+            {
+                using var ms = new MemoryStream();
+                WebSocketReceiveResult result;
+
+                do
+                {
+                    result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
+                    if (result.MessageType == WebSocketMessageType.Close)
+                    {
+                        Log($"WebSocket Close received: {result.CloseStatus} - {result.CloseStatusDescription}");
+                        if (OnDisconnected != null) await OnDisconnected.Invoke(result.CloseStatusDescription ?? "Closed");
+                        return;
+                    }
+                    ms.Write(buffer, 0, result.Count);
+                }
+                while (!result.EndOfMessage);
+
+                var bytes = ms.ToArray();
+
+                if (result.MessageType == WebSocketMessageType.Text)
+                {
+                    var text = Encoding.UTF8.GetString(bytes);
+                    Log($"<< RECV JSON: {text}");
+                    await HandleServerJsonMessageAsync(text);
+                }
+                else if (result.MessageType == WebSocketMessageType.Binary)
+                {
+                    Log($"<< RECV BINARY: {bytes.Length} bytes");
+                    var opusPayload = bytes;
+                    if (bytes.Length > 4)
+                    {
+                        int lengthPrefix = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+                        if (lengthPrefix == bytes.Length - 4)
+                        {
+                            opusPayload = new byte[lengthPrefix];
+                            Buffer.BlockCopy(bytes, 4, opusPayload, 0, lengthPrefix);
+                        }
+                    }
+
+                    if (OnIncomingAudio != null)
+                        await OnIncomingAudio.Invoke(opusPayload);
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Log($"ReceiveLoop Exception: {ex.Message}");
+            if (OnDisconnected != null) await OnDisconnected.Invoke(ex.Message);
+        }
+    }
+
+    public Task SendHelloHandshakeAsync()
+    {
+        var hello = new HelloMessage
+        {
+            Type = "hello",
+            Version = 3,
+            Transport = "websocket",
+            AudioParams = new HelloAudioParams
+            {
+                Format = "opus",
+                SampleRate = 16000,
+                Channels = 1,
+                FrameDuration = 60
+            }
+        };
+        return SendJsonAsync(hello);
+    }
+
+    public Task StartListeningAsync(string mode = "manual")
+    {
+        var msg = new ListenMessage
+        {
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "start",
+            Mode = mode
+        };
+        return SendJsonAsync(msg);
+    }
+
+    public Task StopListeningAsync()
+    {
+        var msg = new ListenMessage
+        {
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "stop"
+        };
+        return SendJsonAsync(msg);
+    }
+
+    public Task SendTextQueryAsync(string text)
+    {
+        var msg = new ListenMessage
+        {
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "detect",
+            Text = text
+        };
+        return SendJsonAsync(msg);
+    }
+
+    public Task SendAbortAsync(string reason = "wake_word_detected")
+    {
+        var msg = new AbortMessage
+        {
+            SessionId = _sessionId,
+            Reason = reason
+        };
+        return SendJsonAsync(msg);
+    }
+
+    private async Task HandleServerJsonMessageAsync(string jsonText)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonText);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("type", out var typeProp)) return;
+            var type = typeProp.GetString();
+
+            if (root.TryGetProperty("session_id", out var sidProp))
+            {
+                _sessionId = sidProp.GetString();
+                Log($"SessionId updated: {_sessionId}");
+            }
+
+            switch (type)
+            {
+                case "hello":
+                    if (OnConnected != null) await OnConnected.Invoke();
+                    break;
+
+                case "stt":
+                    if (root.TryGetProperty("text", out var sttText) && OnIncomingText != null)
+                        await OnIncomingText.Invoke($"[STT]: {sttText.GetString()}");
+                    break;
+
+                case "llm":
+                    var llmText = root.TryGetProperty("text", out var tp) ? tp.GetString() : null;
+                    var emotion = root.TryGetProperty("emotion", out var ep) ? ep.GetString() : null;
+                    if (!string.IsNullOrEmpty(llmText) && llmText != "😊" && llmText != "🤔")
+                    {
+                        if (OnLlmResponse != null) await OnLlmResponse.Invoke(llmText, emotion);
+                    }
+                    break;
+
+                case "tts":
+                    if (root.TryGetProperty("state", out var ttsState) && OnTtsStateChanged != null)
+                    {
+                        var state = ttsState.GetString() ?? "";
+                        if (state == "sentence_start" && root.TryGetProperty("text", out var sentenceText))
+                        {
+                            var s = sentenceText.GetString();
+                            if (!string.IsNullOrEmpty(s) && OnLlmResponse != null)
+                                await OnLlmResponse.Invoke(s, null);
+                        }
+                        await OnTtsStateChanged.Invoke(state);
+                    }
+                    break;
+
+                case "goodbye":
+                    if (OnDisconnected != null) await OnDisconnected.Invoke("goodbye");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"Error parsing server json: {ex}");
+            if (OnError != null) await OnError.Invoke(ex);
+        }
+    }
+
+    public async Task SendAudioAsync(byte[] opusData)
+    {
+        if (!IsConnected || _ws == null) return;
+        try
+        {
+            var packet = new byte[16 + opusData.Length];
+            BinaryPrimitives.WriteUInt16BigEndian(packet.AsSpan(0, 2), 2);
+            BinaryPrimitives.WriteUInt16BigEndian(packet.AsSpan(2, 2), 0);
+            BinaryPrimitives.WriteUInt32BigEndian(packet.AsSpan(4, 4), 0);
+            BinaryPrimitives.WriteUInt32BigEndian(packet.AsSpan(8, 4), 0);
+            BinaryPrimitives.WriteUInt32BigEndian(packet.AsSpan(12, 4), (uint)opusData.Length);
+            Buffer.BlockCopy(opusData, 0, packet, 16, opusData.Length);
+
+            await _sendLock.WaitAsync();
+            try
+            {
+                if (IsConnected && _ws != null)
+                    await _ws.SendAsync(packet, WebSocketMessageType.Binary, true, CancellationToken.None);
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
+        }
+        catch { }
+    }
+
+    public async Task SendTextAsync(string text)
+    {
+        if (!IsConnected || _ws == null)
+        {
+            Log($"!! SendTextAsync FAILED - Not connected");
+            return;
+        }
+
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes(text);
+            Log($">> WS SEND: {text}");
+
+            await _sendLock.WaitAsync();
+            try
+            {
+                if (IsConnected && _ws != null)
+                    await _ws.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"SendTextAsync Exception: {ex.Message}");
+        }
+    }
+
+    public Task SendJsonAsync(object data)
+    {
+        return SendTextAsync(JsonSerializer.Serialize(data));
+    }
+
+    public async Task DisconnectAsync()
+    {
+        _cts?.Cancel();
+        if (_ws != null)
+        {
+            try
+            {
+                if (_ws.State == WebSocketState.Open)
+                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+            }
+            catch { }
+            finally
+            {
+                _ws.Dispose();
+                _ws = null;
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await DisconnectAsync();
+        _sendLock.Dispose();
+    }
+}

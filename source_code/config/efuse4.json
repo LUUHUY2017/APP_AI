@@ -1,0 +1,12 @@
+{
+  "mac_address": "cc:30:80:20:64:7c",
+  "serial_number": "SN-F396BDD6-cc308020647c",
+  "hmac_key": "91b1b1f5c9ccd71ceca2407055917d999997ad04bd3743b95e27ccc7cc82b252",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "DESKTOP-QMAKAJV",
+    "mac_address": "cc:30:80:20:64:7c",
+    "machine_id": "27e45b4f-a573-430f-9a60-515e969a1339"
+  }
+}
