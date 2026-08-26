@@ -353,13 +353,22 @@ class LilyPWA {
       this.avatarRing.classList.add('pulsing');
       this.currentMsgBar.innerText = '🎤 Đang nghe giọng nói của bạn...';
 
-      // Send start listening
-      this.ws.send(JSON.stringify({
-        session_id: this.sessionId,
-        type: "listen",
-        state: "start",
-        mode: "manual"
-      }));
+      // If Web Speech API recognition available & WS offline, use Web Speech API
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition && (!this.ws || this.ws.readyState !== WebSocket.OPEN)) {
+        this.startWebSpeechRecognition();
+        return;
+      }
+
+      // Send start listening to WebSocket if connected
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify({
+          session_id: this.sessionId,
+          type: "listen",
+          state: "start",
+          mode: "manual"
+        }));
+      }
 
       // Audio Streaming Worklet / Processor
       const source = this.audioCtx.createMediaStreamSource(this.mediaStream);
@@ -394,6 +403,39 @@ class LilyPWA {
     }
   }
 
+  startWebSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    this.recognition = new SpeechRecognition();
+    this.recognition.lang = 'vi-VN';
+    this.recognition.interimResults = true;
+    this.recognition.continuous = false;
+
+    this.recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      this.currentMsgBar.innerText = `🎤 ${transcript}`;
+      if (event.results[0].isFinal) {
+        this.stopRecording();
+        this.textInput.value = transcript;
+        this.sendTextMessage();
+      }
+    };
+
+    this.recognition.onerror = () => {
+      this.stopRecording();
+    };
+
+    this.recognition.onend = () => {
+      if (this.isRecording) this.stopRecording();
+    };
+
+    this.recognition.start();
+  }
+
   async stopRecording() {
     if (!this.isRecording) return;
     this.isRecording = false;
@@ -424,7 +466,7 @@ class LilyPWA {
 
     this.textInput.value = '';
     this.appendMessage(text, 'user');
-    this.currentMsgBar.innerText = '⏳ Đang gửi câu hỏi...';
+    this.currentMsgBar.innerText = '⏳ Đang xử lý câu hỏi...';
 
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
@@ -434,13 +476,60 @@ class LilyPWA {
         text: text
       }));
     } else {
-      this.currentMsgBar.innerText = '⚠️ Mất kết nối server. Đang thử kết nối lại...';
-      this.connect();
+      // Local Smart Fallback Response
+      this.handleLocalResponse(text);
+    }
+  }
+
+  handleLocalResponse(userText) {
+    this.setStatus('🌐 Chế độ Ngoại tuyến / Web Voice', true);
+    this.setSpeaking(true);
+    
+    let reply = "Dạ, Lily đã nhận được câu hỏi: \"" + userText + "\". Hiện tại kết nối Server OTA tạm bận, Lily đang hỗ trợ bạn bằng giọng nói trình duyệt nhé!";
+    
+    if (userText.toLowerCase().includes("chào") || userText.toLowerCase().includes("hello")) {
+      reply = "Xin chào bạn! Mình là Lily - Trợ lý ảo AI thông minh. Mình có thể giúp gì cho bạn hôm nay?";
+    } else if (userText.toLowerCase().includes("tên") || userText.toLowerCase().includes("ai")) {
+      reply = "Mình là trợ lý ảo Lily, được phát triển để trò chuyện và hỗ trợ bạn bằng giọng nói tiếng Việt!";
+    }
+
+    setTimeout(() => {
+      this.appendMessage(reply, 'ai');
+      this.currentMsgBar.innerText = reply;
+      this.speakLocalText(reply);
+    }, 600);
+  }
+
+  speakLocalText(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'vi-VN';
+      utterance.rate = 1.0;
+      utterance.pitch = 1.1;
+
+      utterance.onend = () => {
+        this.setSpeaking(false);
+        if (this.handsFree && !this.isRecording) {
+          setTimeout(() => this.startRecording(), 800);
+        }
+      };
+
+      utterance.onerror = () => {
+        this.setSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setTimeout(() => this.setSpeaking(false), 2000);
     }
   }
 
   abort() {
     this.setSpeaking(false);
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     this.currentMsgBar.innerText = '⛔ Đã dừng';
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({
