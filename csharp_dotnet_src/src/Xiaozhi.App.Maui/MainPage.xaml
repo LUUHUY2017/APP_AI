@@ -7,19 +7,29 @@
              BackgroundColor="#000000">
 
     <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="14,4,14,10" VerticalOptions="FillAndExpand">
-        <!-- Gemini Top Header -->
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,4,0,8">
-            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
-                <Label Text="☰" FontSize="20" TextColor="#E3E3E3" VerticalOptions="Center" Margin="0,0,2,0" />
-                <Image Source="susu_logo.png" WidthRequest="26" HeightRequest="26" VerticalOptions="Center" />
-                <Label Text="SUSU FILM AI ⌄" FontSize="16" FontAttributes="Bold" TextColor="#F1F1F1" VerticalOptions="Center" />
-                <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="11" TextColor="#8E918F" VerticalOptions="Center" Margin="4,0,0,0" />
-            </HorizontalStackLayout>
+        <!-- Compact modern header -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="2,6,2,10">
+            <Image Grid.Column="0" Source="susu_logo_modern.png" WidthRequest="34" HeightRequest="34"
+                   Aspect="AspectFit" VerticalOptions="Center" />
 
-            <HorizontalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                <Button x:Name="HandsFreeBtn" Text="🎙️ Rảnh tay" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="13" Padding="4" Clicked="OnHandsFreeClicked" ToolTipProperties.Text="Rảnh tay" />
-                <Button Text="🔄" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="17" Padding="4" Clicked="OnRefreshClicked" ToolTipProperties.Text="Tải lại" />
-                <Button Text="⚙" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="18" Padding="4" Clicked="OnSettingsClicked" ToolTipProperties.Text="Cài đặt" />
+            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                <Label Text="SUSU FILM AI" FontSize="15" FontAttributes="Bold"
+                       TextColor="#F5F7FA" LineBreakMode="TailTruncation" />
+                <Label x:Name="StatusLabel" Text="Sẵn sàng" FontSize="11"
+                       TextColor="#8F9BA8" LineBreakMode="TailTruncation" />
+            </VerticalStackLayout>
+
+            <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
+                <Button x:Name="HandsFreeBtn" Text="🎙 Rảnh tay" BackgroundColor="#171A20"
+                        TextColor="#B8C1CC" FontSize="11" FontAttributes="Bold"
+                        HeightRequest="36" Padding="10,0" CornerRadius="18"
+                        Clicked="OnHandsFreeClicked" ToolTipProperties.Text="Rảnh tay" />
+                <Button Text="↻" BackgroundColor="#171A20" TextColor="#B8C1CC"
+                        FontSize="19" WidthRequest="36" HeightRequest="36" CornerRadius="18"
+                        Padding="0" Clicked="OnRefreshClicked" ToolTipProperties.Text="Tải lại" />
+                <Button Text="⚙" BackgroundColor="#171A20" TextColor="#B8C1CC"
+                        FontSize="16" WidthRequest="36" HeightRequest="36" CornerRadius="18"
+                        Padding="0" Clicked="OnSettingsClicked" ToolTipProperties.Text="Cài đặt" />
             </HorizontalStackLayout>
         </Grid>
 
@@ -39,10 +49,11 @@
                FontSize="11" TextColor="#8E918F" HorizontalOptions="Center" Margin="0,4,0,8" />
 
         <!-- Floating Gemini Input Capsule Bar -->
-        <Frame Grid.Row="3" BackgroundColor="#1E1F22" CornerRadius="28" Padding="8,4" HasShadow="True" BorderColor="Transparent" Margin="0,0,0,4">
+        <Frame Grid.Row="3" BackgroundColor="#171A20" CornerRadius="26" Padding="7,4"
+               HasShadow="False" BorderColor="Transparent" Margin="0,0,0,4">
             <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="4" VerticalOptions="Center">
                 <!-- Plus Button -->
-                <Button Grid.Column="0" Text="＋" BackgroundColor="Transparent" TextColor="#C4C7C5" FontSize="22" 
+                <Button Grid.Column="0" Text="＋" BackgroundColor="Transparent" TextColor="#AEB7C2" FontSize="22"
                         WidthRequest="40" HeightRequest="40" Padding="0" VerticalOptions="Center" Clicked="OnPlusClicked" />
 
                 <!-- Main Text Entry -->
@@ -53,12 +64,14 @@
                        VerticalOptions="Center" HeightRequest="44" />
 
                 <!-- Mic Record Button -->
-                <Button Grid.Column="2" x:Name="MicButton" Text="🎙️" BackgroundColor="Transparent" TextColor="#C4C7C5" 
+                <Button Grid.Column="2" x:Name="MicButton" Text="🎙" BackgroundColor="Transparent" TextColor="#AEB7C2"
                         FontSize="20" WidthRequest="40" HeightRequest="40" Padding="0" VerticalOptions="Center" Clicked="OnMicButtonClicked" />
 
-                <!-- Floating Voice Waveform Button -->
-                <Button Grid.Column="3" x:Name="SendButton" Text="📊" BackgroundColor="#2B3964" TextColor="#7CACF8" 
-                        FontSize="16" WidthRequest="40" HeightRequest="40" CornerRadius="20" Padding="0" VerticalOptions="Center" Clicked="OnSendClicked" />
+                <!-- Clear text send action -->
+                <Button Grid.Column="3" x:Name="SendButton" Text="Gửi" BackgroundColor="#7C5CFC"
+                        TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold"
+                        WidthRequest="54" HeightRequest="40" CornerRadius="20" Padding="0"
+                        VerticalOptions="Center" Clicked="OnSendClicked" />
             </Grid>
         </Frame>
     </Grid>

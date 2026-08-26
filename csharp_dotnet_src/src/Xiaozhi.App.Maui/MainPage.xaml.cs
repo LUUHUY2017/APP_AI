@@ -150,7 +150,8 @@ public partial class MainPage : ContentPage
     {
         _handsFree = !_handsFree;
         HandsFreeBtn.Text = _handsFree ? "🎙️ Rảnh tay: Bật" : "🎙️ Rảnh tay: Tắt";
-        HandsFreeBtn.BackgroundColor = _handsFree ? Color.FromArgb("#2ed573") : Color.FromArgb("#1c1936");
+        HandsFreeBtn.BackgroundColor = _handsFree ? Color.FromArgb("#2F8F68") : Color.FromArgb("#171A20");
+        HandsFreeBtn.TextColor = _handsFree ? Colors.White : Color.FromArgb("#B8C1CC");
     }
 
     private async void OnRefreshClicked(object sender, EventArgs e)
