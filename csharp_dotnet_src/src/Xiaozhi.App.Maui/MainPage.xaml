@@ -8,15 +8,15 @@
 
     <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="14,4,14,10" VerticalOptions="FillAndExpand">
         <!-- Compact modern header -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="2,6,2,10">
-            <Image Grid.Column="0" Source="susu_logo_modern.png" WidthRequest="34" HeightRequest="34"
-                   Aspect="AspectFit" VerticalOptions="Center" />
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="2,4,2,10">
+            <Image Grid.Column="0" Source="susu_logo.png" WidthRequest="32" HeightRequest="32"
+                   Aspect="AspectFit" VerticalOptions="Center" HorizontalOptions="Start" />
 
-            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
-                <Label Text="SUSU FILM AI" FontSize="15" FontAttributes="Bold"
-                       TextColor="#F5F7FA" LineBreakMode="TailTruncation" />
-                <Label x:Name="StatusLabel" Text="Sẵn sàng" FontSize="11"
-                       TextColor="#8F9BA8" LineBreakMode="TailTruncation" />
+            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center" HorizontalOptions="Start">
+                <Label Text="TONY AI ⌄" FontSize="16" FontAttributes="Bold"
+                       TextColor="#F5F7FA" LineBreakMode="NoWrap" HorizontalOptions="Start" />
+                <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="11"
+                       TextColor="#8F9BA8" LineBreakMode="TailTruncation" HorizontalOptions="Start" />
             </VerticalStackLayout>
 
             <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">

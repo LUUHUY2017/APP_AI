@@ -129,8 +129,9 @@ public partial class MainPage : ContentPage
     private async Task StartRecordingAsync()
     {
         _isRecording = true;
-        MicButton.Text = "⏹️ Đang nghe (Bấm để dừng)";
-        MicButton.BackgroundColor = Colors.DarkRed;
+        MicButton.Text = "🔴";
+        MicButton.BackgroundColor = Color.FromArgb("#FF3B30");
+        MicButton.TextColor = Colors.White;
         StatusLabel.Text = "🎙️ Đang lắng nghe...";
         StartSilenceAutoSendTimer();
 
@@ -164,8 +165,9 @@ public partial class MainPage : ContentPage
         if (!_isRecording) return;
         _silenceTimer?.Stop();
         _isRecording = false;
-        MicButton.Text = "🎤 Bấm để nói";
-        MicButton.BackgroundColor = Color.FromArgb("#6c5ce7");
+        MicButton.Text = "🎙️";
+        MicButton.BackgroundColor = Colors.Transparent;
+        MicButton.TextColor = Color.FromArgb("#AEB7C2");
         StatusLabel.Text = "🧠 Đang xử lý...";
         if (_client.IsConnected)
         {
