@@ -49,6 +49,7 @@ public partial class SettingsPage : ContentPage
             DeviceIdEntry.Text = macAddress;
         }
 
+        SerialNoLabel.Text = macAddress;
         OtpStatusLabel.Text = "⏳ Đang kết nối OTA Server lấy mã OTP...";
         OtpCodeLabel.Text = "******";
 
@@ -69,7 +70,7 @@ public partial class SettingsPage : ContentPage
             _activeWebUrl = result.QrUrl ?? $"https://xiaozhi.me/active?code={code}";
 
             OtpCodeLabel.Text = code;
-            OtpStatusLabel.Text = "👉 Đã lấy thành công mã OTP từ Server! Hãy nhập 6 số này trên trang xiaozhi.me:";
+            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh: {code} và Số Serial: {macAddress} trên trang xiaozhi.me:";
             OpenActiveWebBtn.IsEnabled = true;
         }
         else

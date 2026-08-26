@@ -21,10 +21,21 @@
                     </HorizontalStackLayout>
                     <Label x:Name="OtpStatusLabel" Text="Nhấn nút bên dưới để tạo mã OTP 6 số ghép nối thiết bị trên xiaozhi.me" FontSize="12" TextColor="#b0b0d0" />
 
-                    <!-- Big OTP Code Box -->
-                    <Frame BackgroundColor="#0d0b1a" CornerRadius="10" Padding="12,8" HasShadow="False" BorderColor="#4a3e8c" HorizontalOptions="Center">
-                        <Label x:Name="OtpCodeLabel" Text="------" FontSize="28" FontAttributes="Bold" TextColor="#00FFC8" CharacterSpacing="6" HorizontalOptions="Center" />
-                    </Frame>
+                    <!-- Big OTP Code & Serial Box -->
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Mã xác minh (OTP):" FontSize="11" TextColor="#a0a0ff" HorizontalOptions="Center" />
+                            <Frame BackgroundColor="#0d0b1a" CornerRadius="10" Padding="8,6" HasShadow="False" BorderColor="#4a3e8c">
+                                <Label x:Name="OtpCodeLabel" Text="------" FontSize="22" FontAttributes="Bold" TextColor="#00FFC8" HorizontalOptions="Center" />
+                            </Frame>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Số Serial (MAC):" FontSize="11" TextColor="#a0a0ff" HorizontalOptions="Center" />
+                            <Frame BackgroundColor="#0d0b1a" CornerRadius="10" Padding="8,6" HasShadow="False" BorderColor="#4a3e8c">
+                                <Label x:Name="SerialNoLabel" Text="------" FontSize="12" FontAttributes="Bold" TextColor="#FFDD00" HorizontalOptions="Center" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                            </Frame>
+                        </VerticalStackLayout>
+                    </Grid>
 
                     <!-- OTP Action Buttons -->
                     <Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="0,4,0,0">
