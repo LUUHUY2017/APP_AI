@@ -43,9 +43,9 @@ public partial class SettingsPage : ContentPage
         }
 
         var macAddress = DeviceIdEntry.Text?.Trim();
-        if (string.IsNullOrWhiteSpace(macAddress) || macAddress == "a0:36:bc:2c:ed:40")
+        if (string.IsNullOrWhiteSpace(macAddress) || macAddress == "a0:36:bc:2c:ed:40" || macAddress == "00:00:00:00:00:00")
         {
-            macAddress = "78:21:84:8c:a8:fe";
+            macAddress = GetOrCreateUniqueMacAddress();
             DeviceIdEntry.Text = macAddress;
         }
 
@@ -136,13 +136,33 @@ public partial class SettingsPage : ContentPage
 
     private void OnRandomMacClicked(object sender, EventArgs e)
     {
+        var newMac = GenerateRandomMacAddress();
+        DeviceIdEntry.Text = newMac;
+        Preferences.Default.Set("lily_device_id", newMac);
+        OtpCodeLabel.Text = "******";
+        OtpStatusLabel.Text = $"🎲 Đã tạo MAC mới ({newMac}). Hãy bấm nút 'Tạo mã OTP' bên trên để ghép nối!";
+    }
+
+    public static string GetOrCreateUniqueMacAddress()
+    {
+        var savedMac = Preferences.Default.Get("lily_device_id", "");
+        if (!string.IsNullOrWhiteSpace(savedMac) && savedMac != "a0:36:bc:2c:ed:40" && savedMac != "00:00:00:00:00:00")
+        {
+            return savedMac;
+        }
+
+        var newMac = GenerateRandomMacAddress();
+        Preferences.Default.Set("lily_device_id", newMac);
+        return newMac;
+    }
+
+    private static string GenerateRandomMacAddress()
+    {
         var random = new Random();
         byte[] bytes = new byte[6];
         random.NextBytes(bytes);
-        var mac = string.Join(":", bytes.Select(b => b.ToString("x2")));
-        DeviceIdEntry.Text = mac;
-        OtpCodeLabel.Text = "******";
-        OtpStatusLabel.Text = $"🎲 Đã tạo MAC mới ({mac}). Hãy bấm nút 'Tạo mã OTP' bên trên để ghép nối!";
+        bytes[0] = (byte)((bytes[0] & 0xFE) | 0x02);
+        return string.Join(":", bytes.Select(b => b.ToString("x2")));
     }
 
     private async void OnSaveClicked(object sender, EventArgs e)
