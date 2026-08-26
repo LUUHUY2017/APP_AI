@@ -137,34 +137,58 @@ class LilyPWA {
     this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
   }
 
-  connect() {
+  async fetchOtaConfig() {
+    try {
+      const resp = await fetch('https://api.tenclass.net/xiaozhi/ota/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Device-Id': CONFIG.deviceId,
+          'Client-Id': CONFIG.clientId
+        },
+        body: JSON.stringify({
+          application: { version: '1.7.2' },
+          board: { name: 'xiaozhi-test' }
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.websocket) {
+          if (data.websocket.url) this.dynamicWsUrl = data.websocket.url;
+          if (data.websocket.token) this.dynamicToken = data.websocket.token;
+          console.log('OTA Handshake success:', data.websocket);
+        }
+      }
+    } catch (e) {
+      console.warn('OTA handshake error:', e);
+    }
+  }
+
+  async connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    this.setStatus('Đang kết nối...', false);
+    this.setStatus('Đang kết nối OTA...', false);
+    await this.fetchOtaConfig();
+
     try {
-      let url = CONFIG.wsUrl;
+      let targetWsUrl = this.dynamicWsUrl || CONFIG.wsUrl;
+      let targetToken = this.dynamicToken || CONFIG.token;
+
       const params = [];
-      if (CONFIG.token) params.push(`token=${encodeURIComponent(CONFIG.token)}`);
+      if (targetToken) params.push(`token=${encodeURIComponent(targetToken)}`);
       if (CONFIG.deviceId) params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
       if (CONFIG.clientId) params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
       params.push(`protocol_version=2`);
 
       if (params.length > 0) {
-        url += (url.includes('?') ? '&' : '?') + params.join('&');
+        targetWsUrl += (targetWsUrl.includes('?') ? '&' : '?') + params.join('&');
       }
 
-      console.log('Connecting to WebSocket URL:', url);
-
-      // Try connecting with subprotocol if token exists
-      const protocols = CONFIG.token ? ['bearer', CONFIG.token] : [];
-      try {
-        this.ws = new WebSocket(url, protocols);
-      } catch (e) {
-        this.ws = new WebSocket(url);
-      }
-
+      console.log('Connecting to WebSocket URL:', targetWsUrl);
+      this.ws = new WebSocket(targetWsUrl);
       this.ws.binaryType = 'arraybuffer';
 
       this.ws.onopen = () => {
