@@ -117,20 +117,32 @@ public partial class SettingsPage : ContentPage
         SaveConfigToStorage(WsUrlEntry.Text, randomToken, DeviceIdEntry.Text, ClientIdEntry.Text);
     }
 
-    private async void OnPasteTokenClicked(object sender, EventArgs e)
+    private async void OnCopyOtpClicked(object sender, EventArgs e)
     {
-        if (Clipboard.HasText)
+        var code = OtpCodeLabel.Text?.Trim();
+        if (!string.IsNullOrWhiteSpace(code) && code != "------" && code != "******" && code != "NO CODE")
         {
-            var pasted = await Clipboard.GetTextAsync();
-            if (!string.IsNullOrWhiteSpace(pasted))
-            {
-                TokenEntry.Text = pasted.Trim();
-                await DisplayAlert("Thông báo", "Đã dán Token từ bộ nhớ tạm!", "OK");
-            }
+            await Clipboard.SetTextAsync(code);
+            await DisplayAlert("Thông báo", $"Đã sao chép Mã OTP: {code}", "OK");
         }
         else
         {
-            await DisplayAlert("Thông báo", "Bộ nhớ tạm (Clipboard) đang trống.", "OK");
+            await DisplayAlert("Thông báo", "Vui lòng bấm 'Tạo mã OTP' trước khi sao chép.", "OK");
+        }
+    }
+
+    private async void OnCopySerialClicked(object sender, EventArgs e)
+    {
+        var serial = SerialNoLabel.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(serial) || serial == "------")
+        {
+            serial = DeviceIdEntry.Text?.Trim() ?? GetOrCreateUniqueMacAddress();
+        }
+
+        if (!string.IsNullOrWhiteSpace(serial))
+        {
+            await Clipboard.SetTextAsync(serial);
+            await DisplayAlert("Thông báo", $"Đã sao chép Số Serial (MAC): {serial}\nHãy dán vào ô 'Số Serial' trên xiaozhi.me!", "OK");
         }
     }
 

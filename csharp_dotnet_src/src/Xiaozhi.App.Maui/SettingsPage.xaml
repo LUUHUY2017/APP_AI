@@ -24,15 +24,21 @@
                     <!-- Big OTP Code & Serial Box -->
                     <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
                         <VerticalStackLayout Grid.Column="0" Spacing="4">
-                            <Label Text="Mã xác minh (OTP):" FontSize="11" TextColor="#a0a0ff" HorizontalOptions="Center" />
+                            <Grid ColumnDefinitions="*, Auto">
+                                <Label Grid.Column="0" Text="Mã xác minh (OTP):" FontSize="11" TextColor="#a0a0ff" VerticalOptions="Center" />
+                                <Button Grid.Column="1" Text="📋 Chép" BackgroundColor="#222044" TextColor="#00FFC8" FontSize="10" Padding="4,1" HeightRequest="24" Clicked="OnCopyOtpClicked" />
+                            </Grid>
                             <Frame BackgroundColor="#0d0b1a" CornerRadius="10" Padding="8,6" HasShadow="False" BorderColor="#4a3e8c">
-                                <Label x:Name="OtpCodeLabel" Text="------" FontSize="22" FontAttributes="Bold" TextColor="#00FFC8" HorizontalOptions="Center" />
+                                <Label x:Name="OtpCodeLabel" Text="------" FontSize="20" FontAttributes="Bold" TextColor="#00FFC8" HorizontalOptions="Center" />
                             </Frame>
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Số Serial (MAC):" FontSize="11" TextColor="#a0a0ff" HorizontalOptions="Center" />
+                            <Grid ColumnDefinitions="*, Auto">
+                                <Label Grid.Column="0" Text="Số Serial (MAC):" FontSize="11" TextColor="#a0a0ff" VerticalOptions="Center" />
+                                <Button Grid.Column="1" Text="📋 Chép" BackgroundColor="#222044" TextColor="#FFDD00" FontSize="10" Padding="4,1" HeightRequest="24" Clicked="OnCopySerialClicked" />
+                            </Grid>
                             <Frame BackgroundColor="#0d0b1a" CornerRadius="10" Padding="8,6" HasShadow="False" BorderColor="#4a3e8c">
-                                <Label x:Name="SerialNoLabel" Text="------" FontSize="12" FontAttributes="Bold" TextColor="#FFDD00" HorizontalOptions="Center" VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                <Label x:Name="SerialNoLabel" Text="------" FontSize="11" FontAttributes="Bold" TextColor="#FFDD00" HorizontalOptions="Center" VerticalOptions="Center" LineBreakMode="TailTruncation" />
                             </Frame>
                         </VerticalStackLayout>
                     </Grid>
