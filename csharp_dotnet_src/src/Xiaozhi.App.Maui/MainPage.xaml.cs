@@ -51,6 +51,8 @@ public partial class MainPage : ContentPage
         TextInput.Focused += (s, e) => ScrollToBottom(350);
     }
 
+    private string _lastSentText = string.Empty;
+
     private void SetupClientHandlers()
     {
         _client.OnIncomingText += async (msg) =>
@@ -66,10 +68,14 @@ public partial class MainPage : ContentPage
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                try { Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(150)); } catch { }
                 StatusLabel.Text = "🧠 AI đang suy nghĩ...";
                 CurrentMsgLabel.Text = $"🗣️ AI đã nghe: \"{sttText}\"";
-                AddChatMessage($"🗣️ {sttText}", isUser: true);
+
+                // Chỉ hiển thị bong bóng chat từ Mic nếu câu thoại khác với tin nhắn vừa gõ bằng bàn phím
+                if (!string.Equals(sttText?.Trim(), _lastSentText, StringComparison.OrdinalIgnoreCase))
+                {
+                    AddChatMessage($"🗣️ {sttText}", isUser: true);
+                }
             });
             await Task.CompletedTask;
         };
@@ -216,6 +222,7 @@ public partial class MainPage : ContentPage
         TextInput.Text = string.Empty;
         TextInput.Unfocus();
 
+        _lastSentText = text;
         AddChatMessage(text, isUser: true);
         StatusLabel.Text = "🧠 Đang xử lý...";
         _receivedResponse = false;
