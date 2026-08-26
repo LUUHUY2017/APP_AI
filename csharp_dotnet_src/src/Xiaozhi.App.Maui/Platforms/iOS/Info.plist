@@ -33,5 +33,7 @@
 	<string>Lily AI sử dụng tính năng nhận dạng giọng nói để phản hồi câu hỏi trực tiếp.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>XSAppIconAssets</key>
+	<string>Assets.xcassets/AppIcon.appiconset</string>
 </dict>
 </plist>
