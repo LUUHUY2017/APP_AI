@@ -137,9 +137,9 @@ public partial class MainPage : ContentPage
     private async Task StartRecordingAsync()
     {
         _isRecording = true;
-        MicButton.Text = "🎙️";
-        MicButton.BackgroundColor = Colors.Transparent;
-        MicButton.TextColor = Color.FromArgb("#7C5CFC");
+        MicButton.Text = "⏹";
+        MicButton.BackgroundColor = Color.FromArgb("#2D3037");
+        MicButton.TextColor = Colors.White;
         StatusLabel.Text = "🎙️ Đang lắng nghe...";
         StartSilenceAutoSendTimer();
 
