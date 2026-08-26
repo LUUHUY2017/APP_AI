@@ -35,8 +35,19 @@ public partial class SettingsPage : ContentPage
         _cts?.Cancel();
         _cts = new CancellationTokenSource();
 
-        var deviceId = ClientIdEntry.Text?.Trim() ?? "maui-ios-client";
-        var macAddress = DeviceIdEntry.Text?.Trim() ?? "a0:36:bc:2c:ed:40";
+        var deviceId = ClientIdEntry.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(deviceId) || deviceId == "maui-ios-client" || !Guid.TryParse(deviceId, out _))
+        {
+            deviceId = Guid.NewGuid().ToString();
+            ClientIdEntry.Text = deviceId;
+        }
+
+        var macAddress = DeviceIdEntry.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(macAddress) || macAddress == "a0:36:bc:2c:ed:40")
+        {
+            macAddress = "78:21:84:8c:a8:fe";
+            DeviceIdEntry.Text = macAddress;
+        }
 
         OtpStatusLabel.Text = "⏳ Đang kết nối OTA Server lấy mã OTP...";
         OtpCodeLabel.Text = "******";
