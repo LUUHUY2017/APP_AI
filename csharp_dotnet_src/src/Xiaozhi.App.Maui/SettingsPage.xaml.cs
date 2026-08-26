@@ -84,6 +84,32 @@ public partial class SettingsPage : ContentPage
         }
     }
 
+    private void OnAutoGenerateTokenClicked(object sender, EventArgs e)
+    {
+        var randomToken = $"auto-token-{Guid.NewGuid().ToString("N")[..12]}";
+        TokenEntry.Text = randomToken;
+        OtpCodeLabel.Text = "READY";
+        OtpStatusLabel.Text = "🎉 Đã tự tạo Token thành công! Bạn có thể bấm Lưu & Kết nối ngay.";
+        SaveConfigToStorage(WsUrlEntry.Text, randomToken, DeviceIdEntry.Text, ClientIdEntry.Text);
+    }
+
+    private async void OnPasteTokenClicked(object sender, EventArgs e)
+    {
+        if (Clipboard.HasText)
+        {
+            var pasted = await Clipboard.GetTextAsync();
+            if (!string.IsNullOrWhiteSpace(pasted))
+            {
+                TokenEntry.Text = pasted.Trim();
+                await DisplayAlert("Thông báo", "Đã dán Token từ bộ nhớ tạm!", "OK");
+            }
+        }
+        else
+        {
+            await DisplayAlert("Thông báo", "Bộ nhớ tạm (Clipboard) đang trống.", "OK");
+        }
+    }
+
     private async void OnSaveClicked(object sender, EventArgs e)
     {
         var wsUrl = WsUrlEntry.Text?.Trim();
