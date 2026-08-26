@@ -45,6 +45,7 @@ public class DeviceActivationService
                 {
                     type = SystemConstants.BoardType,
                     name = SystemConstants.AppName,
+                    ip = "192.168.1.100",
                     mac = macAddress
                 }
             };
@@ -56,6 +57,9 @@ public class DeviceActivationService
             };
             request.Headers.Add("Device-Id", macAddress);
             request.Headers.Add("Client-Id", deviceId);
+            request.Headers.Add("User-Agent", $"{SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}");
+            request.Headers.Add("Accept-Language", "zh-CN");
+            request.Headers.Add("Activation-Version", SystemConstants.AppVersion);
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
