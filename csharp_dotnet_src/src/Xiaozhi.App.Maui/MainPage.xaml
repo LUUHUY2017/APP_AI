@@ -9,10 +9,13 @@
     <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="14,8,14,14" VerticalOptions="FillAndExpand">
         <!-- Top Header -->
         <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Margin="0,4,0,12">
-            <StackLayout Grid.Column="0" VerticalOptions="Center">
-                <Label Text="🌸 Lily AI Assistant" FontSize="20" FontAttributes="Bold" TextColor="#FFFFFF" />
-                <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="13" TextColor="#a0a0c0" />
-            </StackLayout>
+            <HorizontalStackLayout Grid.Column="0" VerticalOptions="Center">
+                <Image Source="susu_logo.png" WidthRequest="34" HeightRequest="34" Margin="0,0,8,0" VerticalOptions="Center" />
+                <StackLayout VerticalOptions="Center">
+                    <Label Text="SUSU FILM AI" FontSize="19" FontAttributes="Bold" TextColor="#FFFFFF" />
+                    <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="12" TextColor="#a0a0c0" />
+                </StackLayout>
+            </HorizontalStackLayout>
             <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
                 <Button x:Name="HandsFreeBtn" Text="🎙️ Rảnh tay: Tắt" 
                         BackgroundColor="#1c1936" TextColor="#ffffff" 

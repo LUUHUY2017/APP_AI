@@ -29,6 +29,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<MauiImage Include="Resources\Images\susu_logo.png" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\Xiaozhi.Core\Xiaozhi.Core.csproj" />
 		<ProjectReference Include="..\Xiaozhi.Audio\Xiaozhi.Audio.csproj" />
 		<ProjectReference Include="..\Xiaozhi.Protocols\Xiaozhi.Protocols.csproj" />
