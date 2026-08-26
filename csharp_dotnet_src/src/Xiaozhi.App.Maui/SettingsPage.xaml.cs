@@ -110,6 +110,17 @@ public partial class SettingsPage : ContentPage
         }
     }
 
+    private void OnRandomMacClicked(object sender, EventArgs e)
+    {
+        var random = new Random();
+        byte[] bytes = new byte[6];
+        random.NextBytes(bytes);
+        var mac = string.Join(":", bytes.Select(b => b.ToString("x2")));
+        DeviceIdEntry.Text = mac;
+        OtpCodeLabel.Text = "******";
+        OtpStatusLabel.Text = $"🎲 Đã tạo MAC mới ({mac}). Hãy bấm nút 'Tạo mã OTP' bên trên để ghép nối!";
+    }
+
     private async void OnSaveClicked(object sender, EventArgs e)
     {
         var wsUrl = WsUrlEntry.Text?.Trim();

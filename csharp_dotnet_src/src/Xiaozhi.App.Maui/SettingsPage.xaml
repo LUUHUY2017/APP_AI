@@ -57,7 +57,10 @@
 
             <!-- Device MAC Address -->
             <VerticalStackLayout Spacing="6">
-                <Label Text="Device MAC Address (Device-Id):" TextColor="#d0d0ff" FontSize="14" FontAttributes="Bold" />
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label Grid.Column="0" Text="Device MAC Address (Device-Id):" TextColor="#d0d0ff" FontSize="14" FontAttributes="Bold" VerticalOptions="Center" />
+                    <Button Grid.Column="1" Text="🎲 Tạo MAC Mới" BackgroundColor="#222044" TextColor="#00FFC8" FontSize="12" Padding="6,2" HeightRequest="30" Clicked="OnRandomMacClicked" />
+                </Grid>
                 <Frame BackgroundColor="#1c1936" CornerRadius="10" Padding="12,0" HasShadow="False" BorderColor="#2a254d">
                     <Entry x:Name="DeviceIdEntry" TextColor="#ffffff" PlaceholderColor="#606080" HeightRequest="44" />
                 </Frame>
