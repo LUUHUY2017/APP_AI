@@ -11,10 +11,6 @@ using Xiaozhi.Core.Models;
 
 namespace Xiaozhi.Protocols.WebSocket;
 
-/// <summary>
-/// WebSocket Client chuẩn sử dụng ClientWebSocket gốc của .NET 10.
-/// Ổn định tuyệt đối, không phụ thuộc third-party reactive wrapper gây vòng lặp reconnect.
-/// </summary>
 public class XiaozhiWebSocketClient : IProtocol
 {
     private ClientWebSocket? _ws;
@@ -25,6 +21,8 @@ public class XiaozhiWebSocketClient : IProtocol
     private string? _sessionId;
     private CancellationTokenSource? _cts;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
+    private bool _isDisposed;
+    private bool _autoReconnect = true;
 
     private static readonly string LogFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -62,32 +60,48 @@ public class XiaozhiWebSocketClient : IProtocol
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        await DisconnectAsync();
+        _isDisposed = false;
+        _autoReconnect = true;
+        await ConnectInternalAsync(cancellationToken);
+    }
 
+    private async Task ConnectInternalAsync(CancellationToken cancellationToken)
+    {
+        _cts?.Cancel();
         _cts = new CancellationTokenSource();
-        _ws = new ClientWebSocket();
-        _ws.Options.SetRequestHeader("Authorization", $"Bearer {_token}");
-        _ws.Options.SetRequestHeader("Device-Id", _deviceId);
-        _ws.Options.SetRequestHeader("Client-Id", _clientId);
-        _ws.Options.SetRequestHeader("Protocol-Version", "3");
-        _ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
-        var uri = new Uri(_serverUrl);
-        Log($"Connecting to {uri} ...");
+        try
+        {
+            _ws?.Dispose();
+            _ws = new ClientWebSocket();
+            _ws.Options.SetRequestHeader("Authorization", $"Bearer {_token}");
+            _ws.Options.SetRequestHeader("Device-Id", _deviceId);
+            _ws.Options.SetRequestHeader("Client-Id", _clientId);
+            _ws.Options.SetRequestHeader("Protocol-Version", "3");
+            _ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 
-        await _ws.ConnectAsync(uri, cancellationToken);
-        Log($"WebSocket Connected! State={_ws.State}");
+            var uri = new Uri(_serverUrl);
+            Log($"Connecting to {uri} ...");
 
-        // Start background receive loop
-        _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
+            await _ws.ConnectAsync(uri, cancellationToken);
+            Log($"WebSocket Connected! State={_ws.State}");
 
-        // Send Hello Handshake
-        await SendHelloHandshakeAsync();
+            // Start background receive loop
+            _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
+
+            // Send Hello Handshake
+            await SendHelloHandshakeAsync();
+        }
+        catch (Exception ex)
+        {
+            Log($"ConnectInternalAsync failed: {ex.Message}");
+            TriggerAutoReconnect();
+        }
     }
 
     private async Task ReceiveLoopAsync(CancellationToken ct)
     {
-        var buffer = new byte[32 * 1024]; // 32KB buffer
+        var buffer = new byte[32 * 1024];
 
         try
         {
@@ -102,12 +116,14 @@ public class XiaozhiWebSocketClient : IProtocol
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
                         Log($"WebSocket Close received: {result.CloseStatus} - {result.CloseStatusDescription}");
-                        if (OnDisconnected != null) await OnDisconnected.Invoke(result.CloseStatusDescription ?? "Closed");
-                        return;
+                        break;
                     }
                     ms.Write(buffer, 0, result.Count);
                 }
                 while (!result.EndOfMessage);
+
+                if (result.MessageType == WebSocketMessageType.Close)
+                    break;
 
                 var bytes = ms.ToArray();
 
@@ -119,7 +135,6 @@ public class XiaozhiWebSocketClient : IProtocol
                 }
                 else if (result.MessageType == WebSocketMessageType.Binary)
                 {
-                    Log($"<< RECV BINARY: {bytes.Length} bytes");
                     var opusPayload = bytes;
                     if (bytes.Length > 4)
                     {
@@ -140,8 +155,31 @@ public class XiaozhiWebSocketClient : IProtocol
         catch (Exception ex)
         {
             Log($"ReceiveLoop Exception: {ex.Message}");
-            if (OnDisconnected != null) await OnDisconnected.Invoke(ex.Message);
         }
+        finally
+        {
+            Log("ReceiveLoop exited -> Triggering auto-reconnect...");
+            TriggerAutoReconnect();
+        }
+    }
+
+    private void TriggerAutoReconnect()
+    {
+        if (_isDisposed || !_autoReconnect) return;
+
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(2000);
+            if (!_isDisposed && _autoReconnect && !IsConnected)
+            {
+                Log("Attempting auto-reconnect now...");
+                try
+                {
+                    await ConnectInternalAsync(CancellationToken.None);
+                }
+                catch { }
+            }
+        });
     }
 
     public Task SendHelloHandshakeAsync()
@@ -229,6 +267,11 @@ public class XiaozhiWebSocketClient : IProtocol
                     if (OnConnected != null) await OnConnected.Invoke();
                     break;
 
+                case "alert":
+                    if (root.TryGetProperty("message", out var alertMsg) && OnIncomingText != null)
+                        await OnIncomingText.Invoke($"[Thông báo]: {alertMsg.GetString()}");
+                    break;
+
                 case "stt":
                     if (root.TryGetProperty("text", out var sttText) && OnIncomingText != null)
                         await OnIncomingText.Invoke($"[STT]: {sttText.GetString()}");
@@ -258,6 +301,7 @@ public class XiaozhiWebSocketClient : IProtocol
                     break;
 
                 case "goodbye":
+                    Log("Server sent goodbye");
                     if (OnDisconnected != null) await OnDisconnected.Invoke("goodbye");
                     break;
             }
@@ -333,6 +377,7 @@ public class XiaozhiWebSocketClient : IProtocol
 
     public async Task DisconnectAsync()
     {
+        _autoReconnect = false;
         _cts?.Cancel();
         if (_ws != null)
         {
@@ -352,6 +397,7 @@ public class XiaozhiWebSocketClient : IProtocol
 
     public async ValueTask DisposeAsync()
     {
+        _isDisposed = true;
         await DisconnectAsync();
         _sendLock.Dispose();
     }
