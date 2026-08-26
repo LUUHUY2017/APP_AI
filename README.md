@@ -1,6 +1,6 @@
-# TONY AI (SUSU FILM AI) - Trợ Lý Giọng Nói Thông Minh Đa Nền Tảng (.NET 10 WPF & iOS MAUI)
+# TONY AI (TONY AI) - Trợ Lý Giọng Nói Thông Minh Đa Nền Tảng (.NET 10 WPF & iOS MAUI)
 
-Dự án Trợ lý giọng nói AI **Tony AI** (tên thương hiệu **SUSU FILM AI**) được phát triển trên nền tảng **.NET 10 (C# WPF)** dành cho Windows PC và **.NET MAUI** dành cho hệ điều hành iOS (iPhone/iPad), tuân thủ theo chuẩn giao thức **Tenclass / Xiaozhi Protocols**.
+Dự án Trợ lý giọng nói AI **Tony AI** (tên thương hiệu **TONY AI**) được phát triển trên nền tảng **.NET 10 (C# WPF)** dành cho Windows PC và **.NET MAUI** dành cho hệ điều hành iOS (iPhone/iPad), tuân thủ theo chuẩn giao thức **Tenclass / Xiaozhi Protocols**.
 
 ---
 

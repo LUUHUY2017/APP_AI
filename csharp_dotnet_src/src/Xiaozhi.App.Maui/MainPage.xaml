@@ -38,14 +38,14 @@
             <VerticalStackLayout x:Name="ChatStack" Spacing="16" Padding="0,10">
                 <!-- Welcome Message Gemini Style -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Xin chào sếp! Mình là Tony - SUSU FILM AI. Mình có thể hỗ trợ gì cho bạn hôm nay?" 
+                    <Label Text="Xin chào bạn! Mình là TONY AI. Mình có thể hỗ trợ gì cho bạn hôm nay?" 
                            TextColor="#F1F1F1" FontSize="16" LineHeight="1.4" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
 
         <!-- Gemini Disclaimer Footer -->
-        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="SUSU FILM AI là một trợ lý ảo AI và có thể mắc sai sót." 
+        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="TONY AI là một trợ lý ảo AI và có thể mắc sai sót." 
                FontSize="11" TextColor="#8E918F" HorizontalOptions="Center" Margin="0,4,0,8" />
 
         <!-- Floating Gemini Input Capsule Bar -->
@@ -57,7 +57,7 @@
                         WidthRequest="40" HeightRequest="40" Padding="0" VerticalOptions="Center" Clicked="OnPlusClicked" />
 
                 <!-- Main Text Entry -->
-                <Entry Grid.Column="1" x:Name="TextInput" Placeholder="Hỏi SUSU FILM AI..." 
+                <Entry Grid.Column="1" x:Name="TextInput" Placeholder="Hỏi TONY AI..." 
                        PlaceholderColor="#8E918F" TextColor="#FFFFFF" BackgroundColor="Transparent"
                        Keyboard="Text" ReturnType="Send" Completed="OnSendClicked"
                        ClearButtonVisibility="WhileEditing" FontSize="15"

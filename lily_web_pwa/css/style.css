@@ -1,4 +1,4 @@
-/* ===== SUSU FILM AI - GOOGLE GEMINI THEME ===== */
+/* ===== TONY AI - GOOGLE GEMINI THEME ===== */
 :root {
   --bg-main: #000000;
   --bg-card: rgba(18, 18, 20, 0.95);
@@ -338,7 +338,10 @@ header {
 /* SETTINGS MODAL */
 .modal-overlay {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -405,16 +408,35 @@ header {
 
 /* ANIMATIONS */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes pulseAnim {
-  from { opacity: 0.2; transform: scale(0.9); }
-  to { opacity: 0.9; transform: scale(1.15); }
+  from {
+    opacity: 0.2;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
 }
 
 @keyframes recordGlow {
-  from { box-shadow: 0 0 10px rgba(255, 68, 102, 0.4); }
-  to { box-shadow: 0 0 25px rgba(255, 68, 102, 0.8); }
+  from {
+    box-shadow: 0 0 10px rgba(255, 68, 102, 0.4);
+  }
+
+  to {
+    box-shadow: 0 0 25px rgba(255, 68, 102, 0.8);
+  }
 }

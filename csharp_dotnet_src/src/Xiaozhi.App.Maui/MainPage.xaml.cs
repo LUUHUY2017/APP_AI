@@ -242,14 +242,14 @@ public partial class MainPage : ContentPage
             if (!_receivedResponse)
             {
                 _receivedResponse = true;
-                string reply = $"Dạ SUSU FILM AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng hỗ trợ sếp!";
+                string reply = $"Dạ TONY AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng hỗ trợ !";
                 if (text.ToLower().Contains("chào") || text.ToLower().Contains("hello"))
                 {
-                    reply = "Xin chào sếp! Em là SUSU FILM AI. Em có thể giúp gì cho sếp hôm nay?";
+                    reply = "Xin chào! Em là TONY AI. Em có thể giúp gì cho bạn hôm nay?";
                 }
                 else if (text.ToLower().Contains("ôm") || text.ToLower().Contains("thương"))
                 {
-                    reply = "Gửi sếp một cái ôm thật ấm áp! SUSU FILM AI luôn ở đây để lắng nghe và đồng hành cùng sếp nhé! ❤️";
+                    reply = "Gửi bạn một cái ôm thật ấm áp! TONY AI luôn ở đây để lắng nghe và đồng hành cùng bạn nhé! ❤️";
                 }
 
                 MainThread.BeginInvokeOnMainThread(() =>
@@ -279,7 +279,7 @@ public partial class MainPage : ContentPage
 
         if (bankingKeywords.Any(k => lower.Contains(k)))
         {
-            string safetyReply = "🛡️ Tony tuân thủ quy tắc bảo mật: Để đảm bảo an toàn tuyệt đối cho tài sản và tài khoản ngân hàng của sếp, Tony được lập trình nghiêm cấm truy cập vào các ứng dụng Ngân hàng và Ví điện tử ạ!";
+            string safetyReply = "🛡️ Tony tuân thủ quy tắc bảo mật: Để đảm bảo an toàn tuyệt đối cho tài sản và tài khoản ngân hàng của bạn, Tony được lập trình nghiêm cấm truy cập vào các ứng dụng Ngân hàng và Ví điện tử ạ!";
             StatusLabel.Text = "🛡️ Bảo mật Ngân hàng";
             CurrentMsgLabel.Text = safetyReply;
             AddChatMessage(safetyReply, isUser: false);
@@ -290,7 +290,7 @@ public partial class MainPage : ContentPage
         // 0. CAMERA & VIDEO SMART COMMANDS ("Mở camera", "Bật máy ảnh", "Quay video")
         if (lower.Contains("mở camera") || lower.Contains("bật camera") || lower.Contains("mở máy ảnh") || lower.Contains("bật máy ảnh") || lower.Contains("chụp ảnh"))
         {
-            string reply = "Dạ, Tony đang mở Camera chụp ảnh cho sếp đây ạ!";
+            string reply = "Dạ, Tony đang mở Camera chụp ảnh cho bạn đây ạ!";
             StatusLabel.Text = "📸 Đang mở Camera...";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -310,7 +310,7 @@ public partial class MainPage : ContentPage
 
         if (lower.Contains("quay video") || lower.Contains("quay phim") || lower.Contains("quay clip"))
         {
-            string reply = "Dạ, Tony đang mở chế độ Quay Video cho sếp đây ạ!";
+            string reply = "Dạ, Tony đang mở chế độ Quay Video cho bạn đây ạ!";
             StatusLabel.Text = "🎥 Đang mở Quay Video...";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -332,7 +332,7 @@ public partial class MainPage : ContentPage
         if (lower.Contains("tăng âm lượng") || lower.Contains("to âm lượng") || lower.Contains("bật to lên") || lower.Contains("max âm lượng"))
         {
             _currentVolume = Math.Min(1.0f, _currentVolume + 0.3f);
-            string reply = $"Dạ, Tony đã tăng âm lượng phát giọng nói lên {(int)(_currentVolume * 100)}% cho sếp rồi ạ!";
+            string reply = $"Dạ, Tony đã tăng âm lượng phát giọng nói lên {(int)(_currentVolume * 100)}% cho bạn rồi ạ!";
             StatusLabel.Text = "🔊 Tăng âm lượng";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -343,7 +343,7 @@ public partial class MainPage : ContentPage
         if (lower.Contains("giảm âm lượng") || lower.Contains("nhỏ âm lượng") || lower.Contains("bật nhỏ lại"))
         {
             _currentVolume = Math.Max(0.2f, _currentVolume - 0.3f);
-            string reply = $"Dạ, Tony đã giảm âm lượng phát giọng nói xuống {(int)(_currentVolume * 100)}% cho sếp rồi ạ!";
+            string reply = $"Dạ, Tony đã giảm âm lượng phát giọng nói xuống {(int)(_currentVolume * 100)}% cho bạn rồi ạ!";
             StatusLabel.Text = "🔉 Giảm âm lượng";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -355,7 +355,7 @@ public partial class MainPage : ContentPage
         if (lower.Contains("mấy giờ") || lower.Contains("xem giờ") || lower.Contains("thời gian"))
         {
             var now = DateTime.Now;
-            string reply = $"Dạ, bây giờ là {now:HH:mm} (giờ Việt Nam). Chúc sếp có một khoảng thời gian tuyệt vời!";
+            string reply = $"Dạ, bây giờ là {now:HH:mm} (giờ Việt Nam). Chúc bạn có một khoảng thời gian tuyệt vời!";
             StatusLabel.Text = "⏰ Xem giờ";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -376,7 +376,7 @@ public partial class MainPage : ContentPage
         // 0.1 WEATHER SMART COMMANDS ("Thời tiết hôm nay", "Thời tiết...")
         if (lower.Contains("thời tiết") || lower.Contains("nhiệt độ") || lower.Contains("mưa không"))
         {
-            string reply = "Dạ, dự báo thời tiết hôm nay trời mây thoáng, nhiệt độ khoảng 28°C - 32°C, rất lý tưởng cho công việc của sếp ạ!";
+            string reply = "Dạ, dự báo thời tiết hôm nay trời mây thoáng, nhiệt độ khoảng 28°C - 32°C, rất lý tưởng cho công việc của bạn ạ!";
             StatusLabel.Text = "☀️ Thời tiết";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -397,7 +397,7 @@ public partial class MainPage : ContentPage
 
             if (string.IsNullOrWhiteSpace(destination)) destination = "Hà Nội";
             string mapsUrl = $"http://maps.apple.com/?daddr={Uri.EscapeDataString(destination)}";
-            string reply = $"Dạ, em đang khởi chạy Bản đồ dẫn đường tới {destination} cho sếp!";
+            string reply = $"Dạ, em đang khởi chạy Bản đồ dẫn đường tới {destination} cho bạn!";
 
             StatusLabel.Text = "🗺️ Đang khởi chạy Bản đồ...";
             CurrentMsgLabel.Text = reply;
@@ -419,8 +419,8 @@ public partial class MainPage : ContentPage
                                 .Trim();
 
             string reply = string.IsNullOrWhiteSpace(target)
-                ? "Dạ, em mở Zalo cho sếp đây ạ!"
-                : $"Dạ, em đang mở Zalo để sếp liên hệ với {target} ạ!";
+                ? "Dạ, em mở Zalo cho bạn đây ạ!"
+                : $"Dạ, em đang mở Zalo để bạn liên hệ với {target} ạ!";
 
             StatusLabel.Text = "💬 Đang mở Zalo...";
             CurrentMsgLabel.Text = reply;
@@ -446,7 +446,7 @@ public partial class MainPage : ContentPage
             if (!string.IsNullOrEmpty(digitsOnly) && digitsOnly.Length >= 3)
             {
                 string callUri = $"tel:{digitsOnly}";
-                string reply = $"Dạ, em đang kết nối cuộc gọi tới số {digitsOnly} cho sếp!";
+                string reply = $"Dạ, em đang kết nối cuộc gọi tới số {digitsOnly} cho bạn!";
                 StatusLabel.Text = "📞 Đang gọi điện...";
                 CurrentMsgLabel.Text = reply;
                 AddChatMessage(reply, isUser: false);
@@ -458,7 +458,7 @@ public partial class MainPage : ContentPage
             }
             else
             {
-                string reply = $"Dạ, em đang mở ứng dụng Điện thoại & Danh bạ để sếp gọi cho {target} đây ạ!";
+                string reply = $"Dạ, em đang mở ứng dụng Điện thoại & Danh bạ để bạn gọi cho {target} đây ạ!";
                 StatusLabel.Text = "📞 Đang mở Danh bạ...";
                 CurrentMsgLabel.Text = reply;
                 AddChatMessage(reply, isUser: false);
@@ -499,7 +499,7 @@ public partial class MainPage : ContentPage
 
         if (uri != null)
         {
-            string reply = $"Dạ, em đang mở ứng dụng {appName} cho sếp đây ạ!";
+            string reply = $"Dạ, em đang mở ứng dụng {appName} cho bạn đây ạ!";
             StatusLabel.Text = "🚀 Đang mở ứng dụng...";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -536,7 +536,7 @@ public partial class MainPage : ContentPage
 
     private async void OnPlusClicked(object sender, EventArgs e)
     {
-        string action = await DisplayActionSheet("Tùy chọn SUSU FILM AI", "Hủy", null, "📸 Ghi âm giọng nói", "🖼️ Tải hình ảnh", "⚙️ Cài đặt Server");
+        string action = await DisplayActionSheet("Tùy chọn TONY AI", "Hủy", null, "📸 Ghi âm giọng nói", "🖼️ Tải hình ảnh", "⚙️ Cài đặt Server");
         if (action == "⚙️ Cài đặt Server")
         {
             OnSettingsClicked(sender, e);
