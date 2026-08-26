@@ -18,6 +18,7 @@ public partial class MainPage : ContentPage
     private string _token = "test-token";
     private string _deviceId = "a0:36:bc:2c:ed:40";
 
+    private float _currentVolume = 1.0f;
     private readonly VoiceActivityDetector _vad = new();
 
     public MainPage()
@@ -313,6 +314,70 @@ public partial class MainPage : ContentPage
         string? uri = null;
         string appName = "";
 
+        // 0. CAMERA & VIDEO SMART COMMANDS ("Mở camera", "Bật máy ảnh", "Quay video")
+        if (lower.Contains("mở camera") || lower.Contains("bật camera") || lower.Contains("mở máy ảnh") || lower.Contains("bật máy ảnh") || lower.Contains("chụp ảnh"))
+        {
+            string reply = "Dạ, Tony đang mở Camera chụp ảnh cho sếp đây ạ!";
+            StatusLabel.Text = "📸 Đang mở Camera...";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+
+            await Task.Delay(800);
+            try
+            {
+                if (MediaPicker.Default.IsCaptureSupported)
+                {
+                    await MediaPicker.Default.CapturePhotoAsync();
+                }
+            }
+            catch { }
+            return true;
+        }
+
+        if (lower.Contains("quay video") || lower.Contains("quay phim") || lower.Contains("quay clip"))
+        {
+            string reply = "Dạ, Tony đang mở chế độ Quay Video cho sếp đây ạ!";
+            StatusLabel.Text = "🎥 Đang mở Quay Video...";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+
+            await Task.Delay(800);
+            try
+            {
+                if (MediaPicker.Default.IsCaptureSupported)
+                {
+                    await MediaPicker.Default.CaptureVideoAsync();
+                }
+            }
+            catch { }
+            return true;
+        }
+
+        // 0.0 VOLUME CONTROL COMMANDS ("Tăng âm lượng", "Giảm âm lượng")
+        if (lower.Contains("tăng âm lượng") || lower.Contains("to âm lượng") || lower.Contains("bật to lên") || lower.Contains("max âm lượng"))
+        {
+            _currentVolume = Math.Min(1.0f, _currentVolume + 0.3f);
+            string reply = $"Dạ, Tony đã tăng âm lượng phát giọng nói lên {(int)(_currentVolume * 100)}% cho sếp rồi ạ!";
+            StatusLabel.Text = "🔊 Tăng âm lượng";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+            return true;
+        }
+
+        if (lower.Contains("giảm âm lượng") || lower.Contains("nhỏ âm lượng") || lower.Contains("bật nhỏ lại"))
+        {
+            _currentVolume = Math.Max(0.2f, _currentVolume - 0.3f);
+            string reply = $"Dạ, Tony đã giảm âm lượng phát giọng nói xuống {(int)(_currentVolume * 100)}% cho sếp rồi ạ!";
+            StatusLabel.Text = "🔉 Giảm âm lượng";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+            return true;
+        }
+
         // 0. TIME & DATE SMART COMMANDS ("Mấy giờ rồi", "Hôm nay ngày mấy")
         if (lower.Contains("mấy giờ") || lower.Contains("xem giờ") || lower.Contains("thời gian"))
         {
@@ -489,7 +554,7 @@ public partial class MainPage : ContentPage
         {
             await TextToSpeech.Default.SpeakAsync(text, new SpeechOptions
             {
-                Volume = 1.0f,
+                Volume = _currentVolume,
                 Pitch = 1.1f
             });
         }

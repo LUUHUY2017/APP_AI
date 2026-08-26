@@ -43,6 +43,8 @@
 	</array>
 	<key>NSContactsUsageDescription</key>
 	<string>Ứng dụng cần quyền truy cập Danh bạ để gọi điện và nhắn tin theo lệnh giọng nói của bạn.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Tony AI cần quyền Máy ảnh để mở Camera và Quay video theo lệnh giọng nói của bạn.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>youtube</string>
