@@ -172,11 +172,10 @@ public partial class MainPage : ContentPage
         MicButton.TextColor = Color.FromArgb("#AEB7C2");
         StatusLabel.Text = "🧠 Đang xử lý...";
 
-        // Rung máy iPhone + Phát tiếng 'Tút' báo hiệu đã nhận câu nói!
+        // Rung máy iPhone báo hiệu đã nhận câu nói!
         try
         {
             Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(220));
-            PlayBeepSound();
         }
         catch { }
 
@@ -184,50 +183,6 @@ public partial class MainPage : ContentPage
         {
             await _client.StopListeningAsync();
         }
-    }
-
-    private void PlayBeepSound()
-    {
-        try
-        {
-            // Synthesize crisp audio beep sound ("Tút")
-            var beepWav = GenerateBeepWavBytes(880, 100);
-            _textStreamer.PlayPcmAudio(beepWav);
-        }
-        catch { }
-    }
-
-    private static byte[] GenerateBeepWavBytes(int frequency = 880, int durationMs = 100)
-    {
-        int sampleRate = 16000;
-        int samples = sampleRate * durationMs / 1000;
-        short[] pcm = new short[samples];
-        for (int i = 0; i < samples; i++)
-        {
-            double t = (double)i / sampleRate;
-            pcm[i] = (short)(Math.Sin(2 * Math.PI * frequency * t) * 16000);
-        }
-
-        using var stream = new System.IO.MemoryStream();
-        using var writer = new System.IO.BinaryWriter(stream);
-        writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
-        writer.Write(36 + samples * 2);
-        writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
-        writer.Write(System.Text.Encoding.ASCII.GetBytes("fmt "));
-        writer.Write(16);
-        writer.Write((short)1);
-        writer.Write((short)1);
-        writer.Write(sampleRate);
-        writer.Write(sampleRate * 2);
-        writer.Write((short)2);
-        writer.Write((short)16);
-        writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));
-        writer.Write(samples * 2);
-        for (int i = 0; i < samples; i++)
-        {
-            writer.Write(pcm[i]);
-        }
-        return stream.ToArray();
     }
 
     private void OnHandsFreeClicked(object sender, EventArgs e)
