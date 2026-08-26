@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -211,5 +212,13 @@ public partial class MainWindow : Window
         {
             _ = _vm.ReconnectAsync();
         }
+    }
+
+    private async void RefreshSync_Click(object sender, RoutedEventArgs e)
+    {
+        StatusLabel.Text = "🔄 Đang đồng bộ web...";
+        CurrentMsgLabel.Text = "⏳ Đang kéo cấu hình mới nhất từ trang web xiaozhi.me...";
+        await _vm.ReconnectAsync();
+        CurrentMsgLabel.Text = "✅ Đã đồng bộ cấu hình thành công! Bạn có thể nói chuyện ngay.";
     }
 }

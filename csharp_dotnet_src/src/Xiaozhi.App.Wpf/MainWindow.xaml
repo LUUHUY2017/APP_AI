@@ -27,9 +27,18 @@
         <!-- HEADER -->
         <Border Grid.Row="0" Background="#161626" Padding="14,0">
             <DockPanel>
-                <Button Content="⚙" DockPanel.Dock="Right" HorizontalAlignment="Right"
-                        Width="34" Height="34" Background="Transparent" BorderBrush="Transparent"
-                        Foreground="#8888BB" FontSize="18" Click="OpenSettings_Click" Cursor="Hand"/>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Button ToolTip="Làm mới &amp; Đồng bộ cấu hình từ web"
+                            Width="34" Height="34" Background="Transparent" BorderBrush="Transparent"
+                            Foreground="#8888BB" FontSize="16" Click="RefreshSync_Click" Cursor="Hand" Margin="0,0,4,0">
+                        <TextBlock Text="🔄" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button ToolTip="Cài đặt"
+                            Width="34" Height="34" Background="Transparent" BorderBrush="Transparent"
+                            Foreground="#8888BB" FontSize="18" Click="OpenSettings_Click" Cursor="Hand">
+                        <TextBlock Text="⚙" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="#4CAF50" Margin="0,0,8,0"/>
                     <TextBlock x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="13"
@@ -46,7 +55,7 @@
 
         <!-- CURRENT STATUS BUBBLE -->
         <Border Grid.Row="2" Background="#161628" Padding="14,8" MinHeight="36">
-            <TextBlock x:Name="CurrentMsgLabel" Text="Bấm hoặc giữ 🎤 để nói, hoặc gõ tin nhắn bên dưới." 
+            <TextBlock x:Name="CurrentMsgLabel" Text="Bấm nút 🎤 để nói, hoặc gõ tin nhắn bất kỳ bên dưới." 
                        TextWrapping="Wrap" FontSize="12" Foreground="#A0A0D0" LineHeight="18"/>
         </Border>
 
