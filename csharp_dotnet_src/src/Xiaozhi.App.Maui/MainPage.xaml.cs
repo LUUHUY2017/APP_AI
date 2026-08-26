@@ -314,6 +314,24 @@ public partial class MainPage : ContentPage
         string? uri = null;
         string appName = "";
 
+        // 🔒 STRICT BANKING SAFETY SHIELD (Nghiêm cấm truy cập ứng dụng ngân hàng và tài chính)
+        string[] bankingKeywords = { 
+            "ngân hàng", "bank", "vietcombank", "vcb", "techcombank", "tcb", "bidv", "agribank", 
+            "mbbank", "mb bank", "tpbank", "vpbank", "vib", "acb", "sacombank", "shb", "hdbank",
+            "momo", "zalopay", "viettelpay", "vnpay", "chuyển tiền", "rút tiền", "chuyển khoản",
+            "tài khoản ngân hàng", "ví điện tử"
+        };
+
+        if (bankingKeywords.Any(k => lower.Contains(k)))
+        {
+            string safetyReply = "🛡️ Tony tuân thủ quy tắc bảo mật: Để đảm bảo an toàn tuyệt đối cho tài sản và tài khoản ngân hàng của sếp, Tony được lập trình nghiêm cấm truy cập vào các ứng dụng Ngân hàng và Ví điện tử ạ!";
+            StatusLabel.Text = "🛡️ Bảo mật Ngân hàng";
+            CurrentMsgLabel.Text = safetyReply;
+            AddChatMessage(safetyReply, isUser: false);
+            _ = SpeakAsync(safetyReply);
+            return true;
+        }
+
         // 0. CAMERA & VIDEO SMART COMMANDS ("Mở camera", "Bật máy ảnh", "Quay video")
         if (lower.Contains("mở camera") || lower.Contains("bật camera") || lower.Contains("mở máy ảnh") || lower.Contains("bật máy ảnh") || lower.Contains("chụp ảnh"))
         {
