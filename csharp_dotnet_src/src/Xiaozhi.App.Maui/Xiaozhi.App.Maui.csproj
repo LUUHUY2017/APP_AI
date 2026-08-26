@@ -12,7 +12,7 @@
 		<CheckEolWorkloads>false</CheckEolWorkloads>
 
 		<!-- Display name -->
-		<ApplicationTitle>Lily AI Assistant</ApplicationTitle>
+		<ApplicationTitle>SUSU FILM AI</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.xiaozhi.ai.lily</ApplicationId>
@@ -29,6 +29,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<MauiIcon Include="Resources\AppIcon\appicon.png" ForegroundFile="Resources\AppIcon\appiconfg.png" Color="#0D0B1A" />
 		<MauiImage Include="Resources\Images\susu_logo.png" />
 	</ItemGroup>
 
