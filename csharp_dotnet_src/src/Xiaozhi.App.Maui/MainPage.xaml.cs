@@ -65,6 +65,7 @@ public partial class MainPage : ContentPage
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                try { Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(150)); } catch { }
                 StatusLabel.Text = "🧠 AI đang suy nghĩ...";
                 CurrentMsgLabel.Text = $"🗣️ AI đã nghe: \"{sttText}\"";
                 AddChatMessage($"🗣️ {sttText}", isUser: true);
@@ -169,6 +170,14 @@ public partial class MainPage : ContentPage
         MicButton.BackgroundColor = Colors.Transparent;
         MicButton.TextColor = Color.FromArgb("#AEB7C2");
         StatusLabel.Text = "🧠 Đang xử lý...";
+
+        // Rung máy iPhone báo hiệu đã bắt được giọng nói!
+        try
+        {
+            Vibration.Default.Vibrate(TimeSpan.FromMilliseconds(220));
+        }
+        catch { }
+
         if (_client.IsConnected)
         {
             await _client.StopListeningAsync();
