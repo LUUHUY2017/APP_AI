@@ -42,6 +42,7 @@ public class DeviceActivationService
             {
                 macAddress = string.Join(":", Enumerable.Range(0, 6).Select(i => rawMac.Substring(i * 2, 2)));
             }
+            var cleanMac = rawMac;
 
             var payload = new
             {
@@ -55,8 +56,15 @@ public class DeviceActivationService
                     type = SystemConstants.BoardType,
                     name = SystemConstants.AppName,
                     ip = GetLocalIpAddress(),
-                    mac = macAddress
-                }
+                    mac = macAddress,
+                    mac_address = macAddress,
+                    serial_number = cleanMac,
+                    sn = cleanMac
+                },
+                mac = macAddress,
+                mac_address = macAddress,
+                serial_number = cleanMac,
+                sn = cleanMac
             };
 
             var jsonBody = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
@@ -70,8 +78,10 @@ public class DeviceActivationService
             request.Headers.Add("User-Agent", $"{SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}");
             request.Headers.Add("Accept-Language", "zh-CN");
             request.Headers.Add("Activation-Version", SystemConstants.AppVersion);
+            request.Headers.Add("Mac-Address", macAddress);
+            request.Headers.Add("Serial-Number", cleanMac);
 
-            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
+            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {cleanMac}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
