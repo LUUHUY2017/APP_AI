@@ -13,7 +13,7 @@ namespace Xiaozhi.Protocols.WebSocket;
 
 /// <summary>
 /// WebSocket Client chuẩn cho Tenclass / Xiaozhi.
-/// Đảm bảo duy nhất 1 kết nối active tại một thời điểm (Tránh server đá kết nối trùng Device-Id).
+/// Đảm bảo bóc tách đúng header 16-byte của gói tin âm thanh Opus để phát ra loa.
 /// </summary>
 public class XiaozhiWebSocketClient : IProtocol
 {
@@ -27,7 +27,6 @@ public class XiaozhiWebSocketClient : IProtocol
     private readonly SemaphoreSlim _sendLock = new(1, 1);
     private readonly SemaphoreSlim _connectLock = new(1, 1);
     private bool _isDisposed;
-    private bool _isConnecting = false;
 
     private static readonly string LogFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -163,14 +162,26 @@ public class XiaozhiWebSocketClient : IProtocol
                 }
                 else if (result.MessageType == WebSocketMessageType.Binary)
                 {
-                    var opusPayload = bytes;
-                    if (bytes.Length > 4)
+                    byte[] opusPayload = bytes;
+
+                    // Bóc tách 16-byte Header chuẩn Tenclass: | ver u16 | type u16 | res u32 | ts u32 | size u32 | opus |
+                    if (bytes.Length > 16)
                     {
-                        int lengthPrefix = (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
-                        if (lengthPrefix == bytes.Length - 4)
+                        uint payloadSize = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(12, 4));
+                        if (payloadSize == (uint)(bytes.Length - 16))
                         {
-                            opusPayload = new byte[lengthPrefix];
-                            Buffer.BlockCopy(bytes, 4, opusPayload, 0, lengthPrefix);
+                            opusPayload = new byte[payloadSize];
+                            Buffer.BlockCopy(bytes, 16, opusPayload, 0, (int)payloadSize);
+                        }
+                    }
+                    // Bóc tách 4-byte length prefix nếu có
+                    else if (bytes.Length > 4)
+                    {
+                        uint payloadSize = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(0, 4));
+                        if (payloadSize == (uint)(bytes.Length - 4))
+                        {
+                            opusPayload = new byte[payloadSize];
+                            Buffer.BlockCopy(bytes, 4, opusPayload, 0, (int)payloadSize);
                         }
                     }
 
