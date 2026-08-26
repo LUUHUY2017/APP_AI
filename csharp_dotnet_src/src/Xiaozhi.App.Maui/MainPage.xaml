@@ -11,9 +11,15 @@
                 <Label Text="🌸 Lily AI Assistant" FontSize="20" FontAttributes="Bold" TextColor="#FFFFFF" />
                 <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="13" TextColor="#a0a0c0" />
             </StackLayout>
-            <Button Grid.Column="1" x:Name="HandsFreeBtn" Text="🎙️ Rảnh tay: Tắt" 
-                    BackgroundColor="#1c1936" TextColor="#ffffff" 
-                    CornerRadius="18" Padding="12,6" Clicked="OnHandsFreeClicked" />
+            <HorizontalStackLayout Grid.Column="1" Spacing="6">
+                <Button x:Name="HandsFreeBtn" Text="🎙️ Rảnh tay: Tắt" 
+                        BackgroundColor="#1c1936" TextColor="#ffffff" 
+                        CornerRadius="18" Padding="10,6" Clicked="OnHandsFreeClicked" />
+                <Button Text="🔄" BackgroundColor="#1c1936" TextColor="#ffffff"
+                        CornerRadius="18" Padding="10,6" Clicked="OnRefreshClicked" ToolTipProperties.Text="Đồng bộ" />
+                <Button Text="⚙" BackgroundColor="#1c1936" TextColor="#ffffff"
+                        CornerRadius="18" Padding="10,6" Clicked="OnSettingsClicked" ToolTipProperties.Text="Cài đặt" />
+            </HorizontalStackLayout>
         </Grid>
 
         <!-- Message List area -->
