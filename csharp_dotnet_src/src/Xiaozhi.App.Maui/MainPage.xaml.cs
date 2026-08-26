@@ -103,6 +103,11 @@ public partial class MainPage : ContentPage
 
         try
         {
+            if (string.IsNullOrWhiteSpace(_token))
+            {
+                _token = "test-token";
+            }
+
             await _client.ConnectAsync();
             MainThread.BeginInvokeOnMainThread(() =>
             {
