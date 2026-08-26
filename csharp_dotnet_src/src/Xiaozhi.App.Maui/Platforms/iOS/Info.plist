@@ -41,5 +41,15 @@
 		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>youtube</string>
+		<string>zalo</string>
+		<string>fb</string>
+		<string>fb-messenger</string>
+		<string>tiktok</string>
+		<string>snssdk1128</string>
+		<string>maps</string>
+	</array>
 </dict>
 </plist>

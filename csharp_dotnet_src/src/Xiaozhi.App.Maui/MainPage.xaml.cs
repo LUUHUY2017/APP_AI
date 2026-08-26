@@ -167,6 +167,9 @@ public partial class MainPage : ContentPage
             await _client.SendTextQueryAsync(text);
         }
 
+        // Check for iOS App Launcher voice commands
+        if (await TryOpenAppByVoiceCommandAsync(text)) return;
+
         // Wait 1.8 seconds; if no response from server, use smart local fallback & iOS speech!
         _ = Task.Run(async () =>
         {
@@ -174,14 +177,14 @@ public partial class MainPage : ContentPage
             if (!_receivedResponse)
             {
                 _receivedResponse = true;
-                string reply = $"Dạ Lily đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng trò chuyện cùng sếp!";
+                string reply = $"Dạ SUSU FILM AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng hỗ trợ sếp!";
                 if (text.ToLower().Contains("chào") || text.ToLower().Contains("hello"))
                 {
-                    reply = "Xin chào sếp! Em là Lily - Trợ lý ảo AI thông minh. Em có thể giúp gì cho sếp hôm nay?";
+                    reply = "Xin chào sếp! Em là SUSU FILM AI. Em có thể giúp gì cho sếp hôm nay?";
                 }
                 else if (text.ToLower().Contains("ôm") || text.ToLower().Contains("thương"))
                 {
-                    reply = "Gửi sếp một cái ôm thật ấm áp! Lily luôn ở đây để lắng nghe và đồng hành cùng sếp nhé! ❤️";
+                    reply = "Gửi sếp một cái ôm thật ấm áp! SUSU FILM AI luôn ở đây để lắng nghe và đồng hành cùng sếp nhé! ❤️";
                 }
 
                 MainThread.BeginInvokeOnMainThread(() =>
@@ -193,6 +196,62 @@ public partial class MainPage : ContentPage
                 });
             }
         });
+    }
+
+    private async Task<bool> TryOpenAppByVoiceCommandAsync(string text)
+    {
+        var lower = text.ToLower();
+        string? uri = null;
+        string appName = "";
+
+        if (lower.Contains("mở youtube") || lower.Contains("bật youtube"))
+        {
+            uri = "youtube://";
+            appName = "YouTube";
+        }
+        else if (lower.Contains("mở zalo") || lower.Contains("bật zalo"))
+        {
+            uri = "zalo://";
+            appName = "Zalo";
+        }
+        else if (lower.Contains("mở facebook") || lower.Contains("bật facebook") || lower.Contains("mở fb"))
+        {
+            uri = "fb://";
+            appName = "Facebook";
+        }
+        else if (lower.Contains("mở tiktok") || lower.Contains("bật tiktok"))
+        {
+            uri = "snssdk1128://";
+            appName = "TikTok";
+        }
+        else if (lower.Contains("mở bản đồ") || lower.Contains("mở maps"))
+        {
+            uri = "maps://";
+            appName = "Bản đồ";
+        }
+
+        if (uri != null)
+        {
+            string reply = $"Dạ, em đang mở ứng dụng {appName} cho sếp đây ạ!";
+            StatusLabel.Text = "🚀 Đang mở ứng dụng...";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+
+            await Task.Delay(800);
+            try
+            {
+                await Launcher.Default.OpenAsync(new Uri(uri));
+                return true;
+            }
+            catch
+            {
+                if (appName == "YouTube") await Launcher.Default.OpenAsync(new Uri("https://youtube.com"));
+                else if (appName == "Facebook") await Launcher.Default.OpenAsync(new Uri("https://facebook.com"));
+                return true;
+            }
+        }
+        return false;
     }
 
     private async Task SpeakAsync(string text)
