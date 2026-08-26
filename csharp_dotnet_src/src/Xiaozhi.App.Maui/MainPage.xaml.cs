@@ -45,6 +45,9 @@ public partial class MainPage : ContentPage
 
         SetupClientHandlers();
         _ = ConnectWithOtaAsync();
+
+        // Auto-Scroll chat content above keyboard when typing
+        TextInput.Focused += (s, e) => ScrollToBottom(350);
     }
 
     private void SetupClientHandlers()
@@ -522,11 +525,20 @@ public partial class MainPage : ContentPage
             ChatStack.Children.Add(container);
         }
 
-        Task.Delay(100).ContinueWith(_ =>
+        ScrollToBottom(150);
+    }
+
+    private void ScrollToBottom(int delayMs = 150)
+    {
+        Task.Delay(delayMs).ContinueWith(_ =>
         {
             MainThread.BeginInvokeOnMainThread(async () =>
             {
-                await ChatScrollView.ScrollToAsync(ChatStack, ScrollToPosition.End, true);
+                try
+                {
+                    await ChatScrollView.ScrollToAsync(ChatStack, ScrollToPosition.End, true);
+                }
+                catch { }
             });
         });
     }
