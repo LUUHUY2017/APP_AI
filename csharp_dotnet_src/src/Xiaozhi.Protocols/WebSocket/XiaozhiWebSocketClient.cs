@@ -20,8 +20,9 @@ namespace Xiaozhi.Protocols.WebSocket;
 /// 2. Bắt tay phiên làm việc (Handshake) qua gói tin JSON: 'hello'.
 /// 3. Xử lý gói tin nhị phân (Binary): Bóc tách chuẩn xác 16-byte Header của Tenclass
 ///    để lấy dữ liệu nén Opus nguyên bản và chuyển cho tầng Audio phát ra loa.
-/// 4. Quản lý trạng thái: lắng nghe (listen), ngắt lời (abort), gửi câu hỏi văn bản (detect).
-/// 5. Bắn các sự kiện: OnSttReceived, OnLlmResponse, OnTtsStateChanged, OnIncomingAudio.
+/// 4. Đóng gói âm thanh gửi lên: Đính kèm 16-byte Header chuẩn Tenclass trước khi gửi.
+/// 5. Quản lý trạng thái: lắng nghe (listen), ngắt lời (abort), gửi câu hỏi văn bản (detect).
+/// 6. Bắn các sự kiện: OnSttReceived, OnLlmResponse, OnTtsStateChanged, OnIncomingAudio, OnConnected, OnDisconnected.
 /// </summary>
 public class XiaozhiWebSocketClient : IProtocol
 {
@@ -36,7 +37,7 @@ public class XiaozhiWebSocketClient : IProtocol
     private readonly SemaphoreSlim _connectLock = new(1, 1);
     private bool _isDisposed;
 
-    // Đường dẫn ghi log traffic mạng để debug
+    // Đường dẫn ghi log traffic mạng để debug khi cần
     private static readonly string LogFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "XiaozhiLily", "ws_traffic.log");
@@ -55,15 +56,15 @@ public class XiaozhiWebSocketClient : IProtocol
 
     // Các sự kiện chuẩn theo interface IProtocol
     public event Func<byte[], Task>? OnIncomingAudio;              // Dữ liệu âm thanh Opus sau khi bóc tách header 16 byte
-    public event Func<string, Task>? OnIncomingText;               // Toàn bộ JSON thô từ server
+    public event Func<string, Task>? OnIncomingText;               // Toàn bộ JSON hoặc text thông điệp từ server
     public event Func<Task>? OnConnected;                          // Báo kết nối thành công
     public event Func<string, Task>? OnDisconnected;               // Báo ngắt kết nối kèm lý do
     public event Func<Exception, Task>? OnError;                   // Báo lỗi ngoại lệ mạng
 
     // Các sự kiện nghiệp vụ chuyên biệt cho WPF & MAUI
-    public event Func<string, Task>? OnSttReceived;                 // Khi server nhận dạng giọng nói thành văn bản
-    public event Func<string, string?, Task>? OnLlmResponse;        // Khi AI trả lời nội dung text
-    public event Func<string, Task>? OnTtsStateChanged;            // Trạng thái phát âm thanh: start, stop, sentence_start/end
+    public event Func<string, Task>? OnSttReceived;                 // Khi server nhận dạng giọng nói thành văn bản (STT)
+    public event Func<string, string?, Task>? OnLlmResponse;        // Khi AI trả lời nội dung text (LLM)
+    public event Func<string, Task>? OnTtsStateChanged;            // Trạng thái phát âm thanh AI: start, stop, sentence_start/end
     public event Action<string>? OnStatusChanged;                  // Chuỗi trạng thái hiển thị UI
 
     public bool IsConnected => _ws?.State == WebSocketState.Open;
@@ -109,16 +110,11 @@ public class XiaozhiWebSocketClient : IProtocol
             Log("WebSocket Connected successfully!");
             OnStatusChanged?.Invoke("Đã kết nối! Đang bắt tay phiên...");
 
-            if (OnConnected != null)
-            {
-                _ = OnConnected.Invoke();
-            }
-
             // Bắt đầu luồng nền liên tục nhận dữ liệu từ server
             _ = ReceiveLoopAsync(_cts.Token);
 
             // Gửi gói tin 'hello' để bắt đầu phiên
-            await SendHelloAsync();
+            await SendHelloHandshakeAsync();
         }
         catch (Exception ex)
         {
@@ -139,142 +135,156 @@ public class XiaozhiWebSocketClient : IProtocol
     /// <summary>
     /// Gửi gói tin 'hello' bắt tay xác định cấu hình âm thanh Opus (16kHz, 60ms)
     /// </summary>
-    public async Task SendHelloAsync()
+    public Task SendHelloHandshakeAsync()
     {
-        var helloMsg = new
+        var hello = new HelloMessage
         {
-            type = "hello",
-            version = 1,
-            transport = "websocket",
-            features = new { mcp = false, aec = false },
-            audio_params = new
+            Type = "hello",
+            Version = 1,
+            Transport = "websocket",
+            Features = new HelloFeatures { Mcp = false, Aec = false },
+            AudioParams = new HelloAudioParams
             {
-                format = "opus",
-                sample_rate = 16000,
-                channels = 1,
-                frame_duration = 60
+                Format = "opus",
+                SampleRate = 16000,
+                Channels = 1,
+                FrameDuration = 60
             }
         };
-
-        await SendJsonAsync(helloMsg);
-        Log("Sent Hello handshake.");
+        return SendJsonAsync(hello);
     }
 
     /// <summary>
     /// Bắt đầu phiên lắng nghe giọng nói (listen: start)
     /// </summary>
-    public async Task StartListeningAsync(string mode = "auto")
+    public Task StartListeningAsync(string mode = "manual")
     {
-        var msg = new
+        var msg = new ListenMessage
         {
-            session_id = _sessionId,
-            type = "listen",
-            state = "start",
-            mode = mode
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "start",
+            Mode = mode
         };
-        await SendJsonAsync(msg);
-        Log($"Sent Listen Start (mode={mode})");
+        return SendJsonAsync(msg);
     }
 
     /// <summary>
     /// Dừng phiên lắng nghe giọng nói (listen: stop)
     /// </summary>
-    public async Task StopListeningAsync()
+    public Task StopListeningAsync()
     {
-        var msg = new
+        var msg = new ListenMessage
         {
-            session_id = _sessionId,
-            type = "listen",
-            state = "stop"
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "stop"
         };
-        await SendJsonAsync(msg);
-        Log("Sent Listen Stop");
-    }
-
-    /// <summary>
-    /// Gửi chuỗi text thô lên server qua WebSocket (implement IProtocol)
-    /// </summary>
-    public async Task SendTextAsync(string text)
-    {
-        await SendTextQueryAsync(text);
+        return SendJsonAsync(msg);
     }
 
     /// <summary>
     /// Gửi câu hỏi văn bản trực tiếp (listen: detect)
     /// </summary>
-    public async Task SendTextQueryAsync(string text)
+    public Task SendTextQueryAsync(string text)
     {
-        var msg = new
+        var msg = new ListenMessage
         {
-            session_id = _sessionId,
-            type = "listen",
-            state = "detect",
-            text = text
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "detect",
+            Text = text
         };
-        await SendJsonAsync(msg);
-        Log($"Sent Text Query: {text}");
+        return SendJsonAsync(msg);
     }
 
     /// <summary>
     /// Ngắt lời AI ngay lập tức (abort)
     /// </summary>
-    public async Task SendAbortAsync(string reason = "user_interrupt")
+    public Task SendAbortAsync(string reason = "user_interrupt")
     {
-        var msg = new
+        var msg = new AbortMessage
         {
-            session_id = _sessionId,
-            type = "abort",
-            reason = reason
+            SessionId = _sessionId,
+            Reason = reason
         };
-        await SendJsonAsync(msg);
-        Log($"Sent Abort (reason={reason})");
+        return SendJsonAsync(msg);
     }
 
     /// <summary>
-    /// Gửi một gói tin âm thanh nén Opus lên server
+    /// Gửi gói tin âm thanh nén Opus lên server kèm theo 16-byte Header chuẩn Tenclass
     /// </summary>
     public async Task SendAudioAsync(byte[] opusData)
     {
         if (!IsConnected || _ws == null) return;
-
-        await _sendLock.WaitAsync();
         try
         {
-            await _ws.SendAsync(
-                new ArraySegment<byte>(opusData),
-                WebSocketMessageType.Binary,
-                true,
-                CancellationToken.None);
+            // Cấu trúc 16-byte header: | u16 ver (2) | u16 type (0) | u32 res (0) | u32 ts (0) | u32 payload_size |
+            var packet = new byte[16 + opusData.Length];
+            BinaryPrimitives.WriteUInt16BigEndian(packet.AsSpan(0, 2), 2);
+            BinaryPrimitives.WriteUInt16BigEndian(packet.AsSpan(2, 2), 0);
+            BinaryPrimitives.WriteUInt32BigEndian(packet.AsSpan(4, 4), 0);
+            BinaryPrimitives.WriteUInt32BigEndian(packet.AsSpan(8, 4), 0);
+            BinaryPrimitives.WriteUInt32BigEndian(packet.AsSpan(12, 4), (uint)opusData.Length);
+            Buffer.BlockCopy(opusData, 0, packet, 16, opusData.Length);
+
+            await _sendLock.WaitAsync();
+            try
+            {
+                if (IsConnected && _ws != null)
+                {
+                    await _ws.SendAsync(packet, WebSocketMessageType.Binary, true, CancellationToken.None);
+                }
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
         }
-        finally
+        catch { }
+    }
+
+    /// <summary>
+    /// Gửi chuỗi text thô lên server qua WebSocket
+    /// </summary>
+    public async Task SendTextAsync(string text)
+    {
+        if (!IsConnected || _ws == null)
         {
-            _sendLock.Release();
+            Log($"[WS] Send failed - Not connected");
+            return;
+        }
+
+        try
+        {
+            var bytes = Encoding.UTF8.GetBytes(text);
+            Log($">> WS SEND: {text}");
+
+            await _sendLock.WaitAsync();
+            try
+            {
+                if (IsConnected && _ws != null)
+                {
+                    await _ws.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
+                }
+            }
+            finally
+            {
+                _sendLock.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"[WS] Send Exception: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Helper gửi đối tượng C# dưới dạng chuỗi JSON
+    /// Gửi đối tượng C# được Serialize thành JSON
     /// </summary>
-    public async Task SendJsonAsync(object obj)
+    public Task SendJsonAsync(object data)
     {
-        if (!IsConnected || _ws == null) return;
-
-        string json = JsonSerializer.Serialize(obj);
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
-
-        await _sendLock.WaitAsync();
-        try
-        {
-            await _ws.SendAsync(
-                new ArraySegment<byte>(bytes),
-                WebSocketMessageType.Text,
-                true,
-                CancellationToken.None);
-        }
-        finally
-        {
-            _sendLock.Release();
-        }
+        return SendTextAsync(JsonSerializer.Serialize(data));
     }
 
     /// <summary>
@@ -305,57 +315,14 @@ public class XiaozhiWebSocketClient : IProtocol
                 }
                 while (!result.EndOfMessage);
 
-                byte[] receivedBytes = ms.ToArray();
+                byte[] bytes = ms.ToArray();
 
                 // 1. Gói tin VĂN BẢN (Text JSON)
                 if (result.MessageType == WebSocketMessageType.Text)
                 {
-                    string json = Encoding.UTF8.GetString(receivedBytes);
-                    Log($"Recv Text: {json}");
-
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(json);
-                        var root = doc.RootElement;
-                        if (root.TryGetProperty("session_id", out var sidProp))
-                        {
-                            _sessionId = sidProp.GetString();
-                        }
-
-                        if (root.TryGetProperty("type", out var typeProp))
-                        {
-                            string type = typeProp.GetString() ?? "";
-                            if (type == "stt" && root.TryGetProperty("text", out var sttText))
-                            {
-                                if (OnSttReceived != null)
-                                {
-                                    _ = OnSttReceived.Invoke(sttText.GetString() ?? "");
-                                }
-                            }
-                            else if (type == "llm" && root.TryGetProperty("text", out var llmText))
-                            {
-                                string text = llmText.GetString() ?? "";
-                                string? emotion = root.TryGetProperty("emotion", out var emProp) ? emProp.GetString() : null;
-                                if (OnLlmResponse != null)
-                                {
-                                    _ = OnLlmResponse.Invoke(text, emotion);
-                                }
-                            }
-                            else if (type == "tts" && root.TryGetProperty("state", out var ttsState))
-                            {
-                                if (OnTtsStateChanged != null)
-                                {
-                                    _ = OnTtsStateChanged.Invoke(ttsState.GetString() ?? "");
-                                }
-                            }
-                        }
-                    }
-                    catch { }
-
-                    if (OnIncomingText != null)
-                    {
-                        _ = OnIncomingText.Invoke(json);
-                    }
+                    var json = Encoding.UTF8.GetString(bytes);
+                    Log($"[WS RECV JSON] {json}");
+                    await HandleServerJsonMessageAsync(json);
                 }
                 // 2. Gói tin NHỊ PHÂN (Binary Opus Audio)
                 else if (result.MessageType == WebSocketMessageType.Binary)
@@ -364,21 +331,31 @@ public class XiaozhiWebSocketClient : IProtocol
                     // BÓC TÁCH HEADER 16-BYTE CHUẨN TENCLASS:
                     // | Version u16 | Type u16 | Reserved u32 | Timestamp u32 | Size u32 | Opus Data |
                     // ====================================================================
-                    byte[] opusPayload = receivedBytes;
+                    byte[] opusPayload = bytes;
 
-                    if (receivedBytes.Length > 16)
+                    if (bytes.Length > 16)
                     {
-                        uint payloadSize = BinaryPrimitives.ReadUInt32BigEndian(receivedBytes.AsSpan(12, 4));
-                        if (payloadSize == (uint)(receivedBytes.Length - 16))
+                        uint payloadSize = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(12, 4));
+                        if (payloadSize == (uint)(bytes.Length - 16))
                         {
                             opusPayload = new byte[payloadSize];
-                            Buffer.BlockCopy(receivedBytes, 16, opusPayload, 0, (int)payloadSize);
+                            Buffer.BlockCopy(bytes, 16, opusPayload, 0, (int)payloadSize);
+                        }
+                    }
+                    // Bóc tách 4-byte length prefix nếu có
+                    else if (bytes.Length > 4)
+                    {
+                        uint payloadSize = BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(0, 4));
+                        if (payloadSize == (uint)(bytes.Length - 4))
+                        {
+                            opusPayload = new byte[payloadSize];
+                            Buffer.BlockCopy(bytes, 4, opusPayload, 0, (int)payloadSize);
                         }
                     }
 
                     if (OnIncomingAudio != null)
                     {
-                        _ = OnIncomingAudio.Invoke(opusPayload);
+                        await OnIncomingAudio.Invoke(opusPayload);
                     }
                 }
             }
@@ -386,18 +363,93 @@ public class XiaozhiWebSocketClient : IProtocol
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            Log($"ReceiveLoop error: {ex.Message}");
-            if (OnError != null)
-            {
-                _ = OnError.Invoke(ex);
-            }
+            Log($"[WS] ReceiveLoop Exception: {ex.Message}");
         }
         finally
         {
+            Log("[WS] ReceiveLoop finished.");
             if (OnDisconnected != null)
             {
-                _ = OnDisconnected.Invoke("WebSocket connection terminated.");
+                await OnDisconnected.Invoke("Closed");
             }
+        }
+    }
+
+    /// <summary>
+    /// Bộ điều phối phân tích thông điệp JSON từ server
+    /// </summary>
+    private async Task HandleServerJsonMessageAsync(string jsonText)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonText);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("type", out var typeProp)) return;
+            var type = typeProp.GetString();
+
+            if (root.TryGetProperty("session_id", out var sidProp))
+            {
+                _sessionId = sidProp.GetString();
+                Log($"[SessionId] {_sessionId}");
+            }
+
+            switch (type)
+            {
+                case "hello":
+                    if (OnConnected != null) await OnConnected.Invoke();
+                    break;
+
+                case "alert":
+                    if (root.TryGetProperty("message", out var alertMsg) && OnIncomingText != null)
+                        await OnIncomingText.Invoke($"[Thông báo]: {alertMsg.GetString()}");
+                    break;
+
+                case "stt":
+                    if (root.TryGetProperty("text", out var sttText))
+                    {
+                        var textStr = sttText.GetString();
+                        if (!string.IsNullOrEmpty(textStr))
+                        {
+                            if (OnSttReceived != null) await OnSttReceived.Invoke(textStr);
+                            if (OnIncomingText != null) await OnIncomingText.Invoke($"[STT]: {textStr}");
+                        }
+                    }
+                    break;
+
+                case "llm":
+                    var llmText = root.TryGetProperty("text", out var tp) ? tp.GetString() : null;
+                    var emotion = root.TryGetProperty("emotion", out var ep) ? ep.GetString() : null;
+                    if (!string.IsNullOrEmpty(llmText) && llmText != "😊" && llmText != "🤔")
+                    {
+                        if (OnLlmResponse != null) await OnLlmResponse.Invoke(llmText, emotion);
+                    }
+                    break;
+
+                case "tts":
+                    if (root.TryGetProperty("state", out var ttsState) && OnTtsStateChanged != null)
+                    {
+                        var state = ttsState.GetString() ?? "";
+                        if (state == "sentence_start" && root.TryGetProperty("text", out var sentenceText))
+                        {
+                            var s = sentenceText.GetString();
+                            if (!string.IsNullOrEmpty(s) && OnLlmResponse != null)
+                                await OnLlmResponse.Invoke(s, null);
+                        }
+                        await OnTtsStateChanged.Invoke(state);
+                    }
+                    break;
+
+                case "goodbye":
+                    Log("Server sent goodbye");
+                    if (OnDisconnected != null) await OnDisconnected.Invoke("goodbye");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"[WS] Error parsing json: {ex.Message}");
+            if (OnError != null) await OnError.Invoke(ex);
         }
     }
 
@@ -416,19 +468,26 @@ public class XiaozhiWebSocketClient : IProtocol
     public async Task DisconnectAsync()
     {
         _cts?.Cancel();
-        await CloseInternalAsync();
-        _ws?.Dispose();
-        _ws = null;
-        OnStatusChanged?.Invoke("Đã ngắt kết nối.");
+        if (_ws != null)
+        {
+            try
+            {
+                if (_ws.State == WebSocketState.Open)
+                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+            }
+            catch { }
+            finally
+            {
+                _ws.Dispose();
+                _ws = null;
+            }
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        if (_isDisposed) return;
         _isDisposed = true;
-        _cts?.Cancel();
-        await CloseInternalAsync();
-        _ws?.Dispose();
+        await DisconnectAsync();
         _sendLock.Dispose();
         _connectLock.Dispose();
     }
