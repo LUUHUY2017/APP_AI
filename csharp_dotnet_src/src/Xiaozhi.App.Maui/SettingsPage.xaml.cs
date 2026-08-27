@@ -49,7 +49,10 @@ public partial class SettingsPage : ContentPage
             DeviceIdEntry.Text = macAddress;
         }
 
-        SerialNoLabel.Text = macAddress;
+        // Server đăng ký "serial_number" là MAC đã bỏ dấu ":" (xem DeviceActivationService.cs),
+        // nên phải hiển thị/copy đúng định dạng này để nhập trên xiaozhi.me, tránh lỗi "Serial number required/invalid".
+        var cleanSerial = macAddress.Replace(":", "").Replace("-", "").ToLowerInvariant();
+        SerialNoLabel.Text = cleanSerial;
         OtpStatusLabel.Text = "⏳ Đang kết nối OTA Server lấy mã OTP...";
         OtpCodeLabel.Text = "******";
 
@@ -72,7 +75,7 @@ public partial class SettingsPage : ContentPage
             _activeWebUrl = result.QrUrl ?? $"https://xiaozhi.me/active?code={code}";
 
             OtpCodeLabel.Text = code;
-            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh: {code} và Số Serial: {macAddress} trên trang xiaozhi.me:";
+            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh: {code} và Số Serial: {cleanSerial} trên trang xiaozhi.me:";
             OpenActiveWebBtn.IsEnabled = true;
         }
         else
@@ -138,13 +141,19 @@ public partial class SettingsPage : ContentPage
         var serial = SerialNoLabel.Text?.Trim();
         if (string.IsNullOrWhiteSpace(serial) || serial == "------")
         {
-            serial = DeviceIdEntry.Text?.Trim() ?? GetOrCreateUniqueMacAddress();
+            var rawMac = DeviceIdEntry.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(rawMac))
+            {
+                rawMac = GetOrCreateUniqueMacAddress();
+            }
+            // Luôn chuẩn hoá về dạng không dấu ":" để khớp với serial_number đã đăng ký với OTA server.
+            serial = rawMac.Replace(":", "").Replace("-", "").ToLowerInvariant();
         }
 
         if (!string.IsNullOrWhiteSpace(serial))
         {
             await Clipboard.SetTextAsync(serial);
-            await DisplayAlert("Thông báo", $"Đã sao chép Số Serial (MAC): {serial}\nHãy dán vào ô 'Số Serial' trên xiaozhi.me!", "OK");
+            await DisplayAlert("Thông báo", $"Đã sao chép Số Serial: {serial}\nHãy dán vào ô 'Số Serial' trên xiaozhi.me!", "OK");
         }
     }
 
