@@ -189,12 +189,21 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private void OnHandsFreeClicked(object sender, EventArgs e)
+    private async void OnHandsFreeClicked(object sender, EventArgs e)
     {
         _handsFree = !_handsFree;
         HandsFreeBtn.Text = _handsFree ? "🎙️ Rảnh tay: Bật" : "🎙️ Rảnh tay: Tắt";
         HandsFreeBtn.BackgroundColor = _handsFree ? Color.FromArgb("#2F8F68") : Color.FromArgb("#171A20");
         HandsFreeBtn.TextColor = _handsFree ? Colors.White : Color.FromArgb("#B8C1CC");
+
+        if (_handsFree && !_isRecording)
+        {
+            await StartRecordingAsync();
+        }
+        else if (!_handsFree && _isRecording)
+        {
+            await StopRecordingAndProcessAsync();
+        }
     }
 
     private async void OnRefreshClicked(object sender, EventArgs e)
@@ -537,6 +546,12 @@ public partial class MainPage : ContentPage
             });
         }
         catch { }
+
+        // Chế độ Rảnh tay: tự động lắng nghe câu tiếp theo ngay khi Backend trả lời xong.
+        if (_handsFree && !_isRecording)
+        {
+            await StartRecordingAsync();
+        }
     }
 
     private async void OnPlusClicked(object sender, EventArgs e)
