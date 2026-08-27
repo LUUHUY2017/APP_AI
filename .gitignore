@@ -12,12 +12,16 @@
 # Installers & Large temp extracted dirs
 {app}/
 Lily.exe_extracted/
+Lily*.exe_extracted/
+Lily*.exe
+Lily_V1.2.0-Setup.exe_extracted/
 *.iss
 *.log
 
 # Publish outputs & Large Binaries
 publish/
 #publish_output/
-.exe
+*.exe
+Lily_V1.2.0-Setup.exe
 *.pdb
 
