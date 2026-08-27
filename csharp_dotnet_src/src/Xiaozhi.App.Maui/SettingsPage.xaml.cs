@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Maui.ApplicationModel;
@@ -42,12 +43,12 @@ public partial class SettingsPage : ContentPage
             ClientIdEntry.Text = deviceId;
         }
 
-        var macAddress = DeviceIdEntry.Text?.Trim();
+        var macAddress = SanitizeMacAddress(DeviceIdEntry.Text?.Trim());
         if (string.IsNullOrWhiteSpace(macAddress) || macAddress == "a0:36:bc:2c:ed:40" || macAddress == "00:00:00:00:00:00")
         {
             macAddress = GetOrCreateUniqueMacAddress();
-            DeviceIdEntry.Text = macAddress;
         }
+        DeviceIdEntry.Text = macAddress;
 
         // Server đăng ký "serial_number" là MAC đã bỏ dấu ":" (xem DeviceActivationService.cs),
         // nên phải hiển thị/copy đúng định dạng này để nhập trên xiaozhi.me, tránh lỗi "Serial number required/invalid".
@@ -183,9 +184,22 @@ public partial class SettingsPage : ContentPage
         OtpStatusLabel.Text = $"🎲 Đã tạo MAC mới ({newMac}). Hãy bấm nút 'Tạo mã OTP' bên trên để ghép nối!";
     }
 
+    public static string SanitizeMacAddress(string? macAddress)
+    {
+        if (string.IsNullOrWhiteSpace(macAddress)) return "";
+        var firstPart = macAddress.Split(new[] { ' ', ',', ';', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        var rawMac = new string(firstPart.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+        if (rawMac.Length >= 12)
+        {
+            rawMac = rawMac.Substring(0, 12);
+            return string.Join(":", Enumerable.Range(0, 6).Select(i => rawMac.Substring(i * 2, 2)));
+        }
+        return "";
+    }
+
     public static string GetOrCreateUniqueMacAddress()
     {
-        var savedMac = Preferences.Default.Get("lily_device_id", "");
+        var savedMac = SanitizeMacAddress(Preferences.Default.Get("lily_device_id", ""));
         if (!string.IsNullOrWhiteSpace(savedMac) && savedMac != "a0:36:bc:2c:ed:40" && savedMac != "00:00:00:00:00:00")
         {
             return savedMac;

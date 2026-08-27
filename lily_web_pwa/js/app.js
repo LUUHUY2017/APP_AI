@@ -33,6 +33,20 @@ function generateRandomMac() {
 }
 
 /**
+ * Chuẩn hoá địa chỉ MAC, xử lý trường hợp có nhiều MAC ngăn cách bằng khoảng trắng
+ */
+function sanitizeMac(str) {
+  if (!str) return '';
+  const firstPart = str.trim().split(/[\s,;\r\n]+/)[0] || '';
+  const hex = firstPart.replace(/[^a-fA-F0-9]/g, '').toLowerCase();
+  if (hex.length >= 12) {
+    const cleanHex = hex.substring(0, 12);
+    return cleanHex.match(/.{1,2}/g).join(':');
+  }
+  return '';
+}
+
+/**
  * Hàm sinh chuỗi Client ID ngẫu nhiên định dạng UUID v4
  */
 function generateClientId() {
@@ -59,7 +73,7 @@ const CONFIG = {
   
   // Địa chỉ MAC của thiết bị (sinh tự động nếu chưa có)
   get deviceId() {
-    let mac = localStorage.getItem('lily_device_id');
+    let mac = sanitizeMac(localStorage.getItem('lily_device_id'));
     if (!mac || mac === 'a0:36:bc:2c:ed:40' || mac === '00:00:00:00:00:00') {
       mac = generateRandomMac();
       localStorage.setItem('lily_device_id', mac);

@@ -81,20 +81,27 @@ public class ConfigManager
 
     public static string GetMacAddress()
     {
-        foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
+        try
         {
-            if (nic.OperationalStatus == OperationalStatus.Up &&
-                nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+            foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
             {
-                var mac = nic.GetPhysicalAddress().ToString();
-                if (mac.Length == 12)
+                if (nic.OperationalStatus == OperationalStatus.Up &&
+                    nic.NetworkInterfaceType != NetworkInterfaceType.Loopback)
                 {
-                    // Format as xx:xx:xx:xx:xx:xx
-                    return string.Join(":", Enumerable.Range(0, 6)
-                        .Select(i => mac.Substring(i * 2, 2).ToLower()));
+                    var bytes = nic.GetPhysicalAddress().GetAddressBytes();
+                    if (bytes != null && bytes.Length == 6)
+                    {
+                        var raw = string.Concat(bytes.Select(b => b.ToString("x2")));
+                        if (raw != "000000000000")
+                        {
+                            return string.Join(":", Enumerable.Range(0, 6)
+                                .Select(i => raw.Substring(i * 2, 2)));
+                        }
+                    }
                 }
             }
         }
+        catch { }
         return "00:00:00:00:00:00";
     }
 }

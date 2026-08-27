@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -37,10 +38,23 @@ public class DeviceActivationService
         var result = new ActivationResult();
         try
         {
-            var rawMac = macAddress.Replace(":", "").Replace("-", "").ToLowerInvariant();
-            if (rawMac.Length == 12)
+            // Chuẩn hoá và làm sạch MAC: Xử lý trường hợp có nhiều MAC ngăn cách bằng khoảng trắng (ví dụ trên iOS)
+            var firstMacPart = (macAddress ?? "").Split(new[] { ' ', ',', ';', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+            var rawMac = new string(firstMacPart.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+            if (rawMac.Length >= 12)
             {
+                rawMac = rawMac.Substring(0, 12);
                 macAddress = string.Join(":", Enumerable.Range(0, 6).Select(i => rawMac.Substring(i * 2, 2)));
+            }
+            else if (rawMac.Length > 0)
+            {
+                rawMac = rawMac.PadRight(12, '0').Substring(0, 12);
+                macAddress = string.Join(":", Enumerable.Range(0, 6).Select(i => rawMac.Substring(i * 2, 2)));
+            }
+            else
+            {
+                rawMac = "000000000000";
+                macAddress = "00:00:00:00:00:00";
             }
             var cleanMac = rawMac;
 
