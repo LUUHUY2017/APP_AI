@@ -91,8 +91,6 @@ public class DeviceActivationService
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;
 
-            var result = new ActivationResult();
-
             if (root.TryGetProperty("token", out var tokenProp))
             {
                 result.IsActivated = true;
