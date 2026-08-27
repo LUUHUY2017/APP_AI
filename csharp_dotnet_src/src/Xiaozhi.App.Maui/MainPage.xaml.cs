@@ -112,7 +112,7 @@ public partial class MainPage : ContentPage
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 StatusLabel.Text = "✅ Sẵn sàng";
-                CurrentMsgLabel.Text = "✅ Đã kết nối với trợ lý Tony!";
+                CurrentMsgLabel.Text = "✅ Đã kết nối với trợ lý Backend!";
             });
         }
         catch
@@ -247,14 +247,14 @@ public partial class MainPage : ContentPage
             if (!_receivedResponse)
             {
                 _receivedResponse = true;
-                string reply = $"Dạ TONY AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng hỗ trợ !";
+                string reply = $"Dạ BACKEND AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng hỗ trợ !";
                 if (text.ToLower().Contains("chào") || text.ToLower().Contains("hello"))
                 {
-                    reply = "Xin chào! Em là TONY AI. Em có thể giúp gì cho bạn hôm nay?";
+                    reply = "Xin chào! Em là BACKEND AI. Em có thể giúp gì cho bạn hôm nay?";
                 }
                 else if (text.ToLower().Contains("ôm") || text.ToLower().Contains("thương"))
                 {
-                    reply = "Gửi bạn một cái ôm thật ấm áp! TONY AI luôn ở đây để lắng nghe và đồng hành cùng bạn nhé! ❤️";
+                    reply = "Gửi bạn một cái ôm thật ấm áp! BACKEND AI luôn ở đây để lắng nghe và đồng hành cùng bạn nhé! ❤️";
                 }
 
                 MainThread.BeginInvokeOnMainThread(() =>
@@ -284,7 +284,7 @@ public partial class MainPage : ContentPage
 
         if (bankingKeywords.Any(k => lower.Contains(k)))
         {
-            string safetyReply = "🛡️ Tony tuân thủ quy tắc bảo mật: Để đảm bảo an toàn tuyệt đối cho tài sản và tài khoản ngân hàng của bạn, Tony được lập trình nghiêm cấm truy cập vào các ứng dụng Ngân hàng và Ví điện tử ạ!";
+            string safetyReply = "🛡️ Backend tuân thủ quy tắc bảo mật: Để đảm bảo an toàn tuyệt đối cho tài sản và tài khoản ngân hàng của bạn, Backend được lập trình nghiêm cấm truy cập vào các ứng dụng Ngân hàng và Ví điện tử ạ!";
             StatusLabel.Text = "🛡️ Bảo mật Ngân hàng";
             CurrentMsgLabel.Text = safetyReply;
             AddChatMessage(safetyReply, isUser: false);
@@ -295,7 +295,7 @@ public partial class MainPage : ContentPage
         // 0. CAMERA & VIDEO SMART COMMANDS ("Mở camera", "Bật máy ảnh", "Quay video")
         if (lower.Contains("mở camera") || lower.Contains("bật camera") || lower.Contains("mở máy ảnh") || lower.Contains("bật máy ảnh") || lower.Contains("chụp ảnh"))
         {
-            string reply = "Dạ, Tony đang mở Camera chụp ảnh cho bạn đây ạ!";
+            string reply = "Dạ, Backend đang mở Camera chụp ảnh cho bạn đây ạ!";
             StatusLabel.Text = "📸 Đang mở Camera...";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -315,7 +315,7 @@ public partial class MainPage : ContentPage
 
         if (lower.Contains("quay video") || lower.Contains("quay phim") || lower.Contains("quay clip"))
         {
-            string reply = "Dạ, Tony đang mở chế độ Quay Video cho bạn đây ạ!";
+            string reply = "Dạ, Backend đang mở chế độ Quay Video cho bạn đây ạ!";
             StatusLabel.Text = "🎥 Đang mở Quay Video...";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -337,7 +337,7 @@ public partial class MainPage : ContentPage
         if (lower.Contains("tăng âm lượng") || lower.Contains("to âm lượng") || lower.Contains("bật to lên") || lower.Contains("max âm lượng"))
         {
             _currentVolume = Math.Min(1.0f, _currentVolume + 0.3f);
-            string reply = $"Dạ, Tony đã tăng âm lượng phát giọng nói lên {(int)(_currentVolume * 100)}% cho bạn rồi ạ!";
+            string reply = $"Dạ, Backend đã tăng âm lượng phát giọng nói lên {(int)(_currentVolume * 100)}% cho bạn rồi ạ!";
             StatusLabel.Text = "🔊 Tăng âm lượng";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -348,7 +348,7 @@ public partial class MainPage : ContentPage
         if (lower.Contains("giảm âm lượng") || lower.Contains("nhỏ âm lượng") || lower.Contains("bật nhỏ lại"))
         {
             _currentVolume = Math.Max(0.2f, _currentVolume - 0.3f);
-            string reply = $"Dạ, Tony đã giảm âm lượng phát giọng nói xuống {(int)(_currentVolume * 100)}% cho bạn rồi ạ!";
+            string reply = $"Dạ, Backend đã giảm âm lượng phát giọng nói xuống {(int)(_currentVolume * 100)}% cho bạn rồi ạ!";
             StatusLabel.Text = "🔉 Giảm âm lượng";
             CurrentMsgLabel.Text = reply;
             AddChatMessage(reply, isUser: false);
@@ -541,7 +541,7 @@ public partial class MainPage : ContentPage
 
     private async void OnPlusClicked(object sender, EventArgs e)
     {
-        string action = await DisplayActionSheet("Tùy chọn TONY AI", "Hủy", null, "📸 Ghi âm giọng nói", "🖼️ Tải hình ảnh", "⚙️ Cài đặt Server");
+        string action = await DisplayActionSheet("Tùy chọn BACKEND AI", "Hủy", null, "📸 Ghi âm giọng nói", "🖼️ Tải hình ảnh", "⚙️ Cài đặt Server");
         if (action == "⚙️ Cài đặt Server")
         {
             OnSettingsClicked(sender, e);

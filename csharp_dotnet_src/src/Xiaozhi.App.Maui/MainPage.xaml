@@ -13,7 +13,7 @@
                    Aspect="AspectFit" VerticalOptions="Center" HorizontalOptions="Start" />
 
             <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center" HorizontalOptions="Start">
-                <Label Text="TONY AI ⌄" FontSize="16" FontAttributes="Bold"
+                <Label Text="BACKEND AI ⌄" FontSize="16" FontAttributes="Bold"
                        TextColor="#F5F7FA" LineBreakMode="NoWrap" HorizontalOptions="Start" />
                 <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="11"
                        TextColor="#8F9BA8" LineBreakMode="TailTruncation" HorizontalOptions="Start" />
@@ -38,14 +38,14 @@
             <VerticalStackLayout x:Name="ChatStack" Spacing="16" Padding="0,10">
                 <!-- Welcome Message Gemini Style -->
                 <VerticalStackLayout Spacing="8">
-                    <Label Text="Xin chào bạn! Mình là TONY AI. Mình có thể hỗ trợ gì cho bạn hôm nay?" 
+                    <Label Text="Xin chào bạn! Mình là BACKEND AI. Mình có thể hỗ trợ gì cho bạn hôm nay?"
                            TextColor="#F1F1F1" FontSize="16" LineHeight="1.4" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
 
         <!-- Gemini Disclaimer Footer -->
-        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="TONY AI là một trợ lý ảo AI và có thể mắc sai sót." 
+        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="BACKEND AI là một trợ lý ảo AI và có thể mắc sai sót."
                FontSize="11" TextColor="#8E918F" HorizontalOptions="Center" Margin="0,4,0,8" />
 
         <!-- Floating Gemini Input Capsule Bar -->
@@ -57,7 +57,7 @@
                         WidthRequest="40" HeightRequest="40" Padding="0" VerticalOptions="Center" Clicked="OnPlusClicked" />
 
                 <!-- Main Text Entry -->
-                <Entry Grid.Column="1" x:Name="TextInput" Placeholder="Hỏi TONY AI..." 
+                <Entry Grid.Column="1" x:Name="TextInput" Placeholder="Hỏi BACKEND AI..."
                        PlaceholderColor="#8E918F" TextColor="#FFFFFF" BackgroundColor="Transparent"
                        Keyboard="Text" ReturnType="Send" Completed="OnSendClicked"
                        ClearButtonVisibility="WhileEditing" FontSize="15"

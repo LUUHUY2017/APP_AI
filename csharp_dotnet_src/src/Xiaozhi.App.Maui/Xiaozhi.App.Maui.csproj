@@ -12,7 +12,7 @@
 		<CheckEolWorkloads>false</CheckEolWorkloads>
 
 		<!-- Display name -->
-		<ApplicationTitle>TONY AI</ApplicationTitle>
+		<ApplicationTitle>BACKEND AI</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.xiaozhi.ai.lily</ApplicationId>
