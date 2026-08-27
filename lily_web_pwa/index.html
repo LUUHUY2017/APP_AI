@@ -34,9 +34,9 @@
     <!-- HEADER -->
     <header>
       <div class="status-group">
-        <img src="icons/icon-192.png" style="width:28px;height:28px;border-radius:6px;object-fit:cover;" alt="TONY">
+        <img src="icons/icon-192.png" style="width:28px;height:28px;border-radius:6px;object-fit:cover;" alt="Lily AI">
         <div id="status-dot" class="status-dot"></div>
-        <div id="status-text" class="status-text">TONY AI</div>
+        <div id="status-text" class="status-text">Lily AI</div>
       </div>
       <div class="header-actions">
         <button id="btn-hands-free" class="btn-pill" title="Chế độ rảnh tay liên tục">🎙️ Rảnh tay: Tắt</button>
@@ -103,9 +103,44 @@
           <label>Token xác thực (Access Token)</label>
           <input type="text" id="cfg-token">
         </div>
+        <div class="modal-actions modal-actions-split">
+          <button id="btn-reactivate" class="btn-pill">🔑 Kích hoạt lại bằng OTP</button>
+        </div>
         <div class="modal-actions">
           <button id="btn-close-settings" class="btn-pill">Đóng</button>
           <button id="btn-save-settings" class="btn-send">Lưu Cấu Hình</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVATION (OTP) MODAL -->
+    <div id="activation-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-title">
+          <span>🔑 Kích Hoạt Thiết Bị</span>
+        </div>
+        <div id="activation-status" class="activation-status">Đang lấy mã kích hoạt...</div>
+
+        <div class="form-group">
+          <label>Mã xác minh (OTP)</label>
+          <div class="otp-row">
+            <div id="activation-code" class="otp-code">------</div>
+            <button id="btn-copy-code" class="btn-pill">📋 Sao chép Mã</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Số Serial</label>
+          <div class="otp-row">
+            <div id="activation-serial" class="otp-serial">------</div>
+            <button id="btn-copy-serial" class="btn-pill">📋 Sao chép Serial</button>
+          </div>
+        </div>
+
+        <a id="activation-open-link" class="btn-send activation-link" href="https://xiaozhi.me" target="_blank" rel="noopener">🌐 Mở xiaozhi.me để nhập mã</a>
+
+        <div class="modal-actions">
+          <button id="btn-close-activation" class="btn-pill">Đóng (Cấu hình thủ công)</button>
         </div>
       </div>
     </div>

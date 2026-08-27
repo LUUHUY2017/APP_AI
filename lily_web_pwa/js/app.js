@@ -1,17 +1,61 @@
 /**
- * LILY AI - iOS PWA CORE CONTROLLER
+ * LILY AI - WEB PWA CORE CONTROLLER
  * Protocol: Xiaozhi WebSocket v2 / Tenclass
+ *
+ * Luồng kích hoạt (OTA + OTP) được đồng bộ 1:1 với DeviceActivationService.cs
+ * (dùng chung cho bản Windows .exe và iOS) để tránh lệch payload/serial_number
+ * khiến xiaozhi.me từ chối thiết bị.
  */
+
+const OTA_URL = 'https://api.tenclass.net/xiaozhi/ota/';
+const APP_VERSION = '2.0.0';
+const BOARD_TYPE = 'bread-compact-wifi';
+const APP_NAME = 'py-xiaozhi';
+
+function generateRandomMac() {
+  const bytes = new Uint8Array(6);
+  crypto.getRandomValues(bytes);
+  bytes[0] = (bytes[0] & 0xFE) | 0x02; // locally-administered, unicast
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(':');
+}
+
+function generateClientId() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 const CONFIG = {
   get wsUrl() { return localStorage.getItem('lily_ws_url') || 'wss://api.tenclass.net/xiaozhi/v1/'; },
-  get token() { return localStorage.getItem('lily_token') || 'test-token'; },
-  get deviceId() { return localStorage.getItem('lily_device_id') || 'a0:36:bc:2c:ed:40'; },
-  get clientId() { return localStorage.getItem('lily_client_id') || '21ebee2f-926c-4703-9010-b488f5939580'; },
-  save(wsUrl, token, deviceId) {
-    localStorage.setItem('lily_ws_url', wsUrl);
-    localStorage.setItem('lily_token', token);
-    localStorage.setItem('lily_device_id', deviceId);
+  get token() { return localStorage.getItem('lily_token') || ''; },
+  get isActivated() { return !!CONFIG.token; },
+  get deviceId() {
+    let mac = localStorage.getItem('lily_device_id');
+    if (!mac || mac === 'a0:36:bc:2c:ed:40' || mac === '00:00:00:00:00:00') {
+      mac = generateRandomMac();
+      localStorage.setItem('lily_device_id', mac);
+    }
+    return mac;
+  },
+  get clientId() {
+    let id = localStorage.getItem('lily_client_id');
+    if (!id) {
+      id = generateClientId();
+      localStorage.setItem('lily_client_id', id);
+    }
+    return id;
+  },
+  get serialNumber() {
+    return CONFIG.deviceId.replace(/:/g, '').replace(/-/g, '').toLowerCase();
+  },
+  save(wsUrl, token, deviceId, clientId) {
+    if (wsUrl) localStorage.setItem('lily_ws_url', wsUrl);
+    localStorage.setItem('lily_token', token || '');
+    if (deviceId) localStorage.setItem('lily_device_id', deviceId);
+    if (clientId) localStorage.setItem('lily_client_id', clientId);
   }
 };
 
@@ -23,6 +67,8 @@ class LilyPWA {
     this.isRecording = false;
     this.isSpeaking = false;
     this.handsFree = false;
+    this.receivedHello = false;
+    this.consecutiveFailures = 0;
 
     // Web Audio
     this.audioCtx = null;
@@ -35,9 +81,12 @@ class LilyPWA {
     this.silenceTimer = null;
     this.lastSpeechTime = 0;
 
+    // Activation polling
+    this.pollTimer = null;
+
     this.initElements();
     this.initEvents();
-    this.connect();
+    this.startActivationFlow();
   }
 
   initElements() {
@@ -59,11 +108,22 @@ class LilyPWA {
     this.settingsModal = document.getElementById('settings-modal');
     this.btnSaveSettings = document.getElementById('btn-save-settings');
     this.btnCloseSettings = document.getElementById('btn-close-settings');
+    this.btnReactivate = document.getElementById('btn-reactivate');
 
     // Settings inputs
     this.inputWsUrl = document.getElementById('cfg-ws-url');
     this.inputToken = document.getElementById('cfg-token');
     this.inputDeviceId = document.getElementById('cfg-device-id');
+
+    // Activation modal
+    this.activationModal = document.getElementById('activation-modal');
+    this.activationCode = document.getElementById('activation-code');
+    this.activationSerial = document.getElementById('activation-serial');
+    this.activationStatus = document.getElementById('activation-status');
+    this.activationLink = document.getElementById('activation-open-link');
+    this.btnCopySerial = document.getElementById('btn-copy-serial');
+    this.btnCopyCode = document.getElementById('btn-copy-code');
+    this.btnCloseActivation = document.getElementById('btn-close-activation');
   }
 
   initEvents() {
@@ -88,6 +148,8 @@ class LilyPWA {
       this.btnHandsFree.innerText = this.handsFree ? '🎙️ Rảnh tay: BẬT' : '🎙️ Rảnh tay: Tắt';
       if (this.handsFree && !this.isRecording) {
         this.startRecording();
+      } else if (!this.handsFree && this.isRecording) {
+        this.stopRecording();
       }
     });
 
@@ -118,6 +180,33 @@ class LilyPWA {
       this.settingsModal.classList.remove('open');
       this.reconnect();
     });
+
+    // "Kích hoạt lại bằng OTP" - giống nút "Tạo mã OTP" ở bản Windows/iOS
+    this.btnReactivate.addEventListener('click', () => {
+      this.settingsModal.classList.remove('open');
+      CONFIG.save(CONFIG.wsUrl, '', CONFIG.deviceId, CONFIG.clientId);
+      if (this.ws) { this.ws.close(); this.ws = null; }
+      this.startActivationFlow();
+    });
+
+    // Activation modal
+    this.btnCopySerial.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(this.activationSerial.innerText);
+      this.btnCopySerial.innerText = '✅ Đã sao chép!';
+      setTimeout(() => { this.btnCopySerial.innerText = '📋 Sao chép Serial'; }, 1500);
+    });
+
+    this.btnCopyCode.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(this.activationCode.innerText);
+      this.btnCopyCode.innerText = '✅ Đã sao chép!';
+      setTimeout(() => { this.btnCopyCode.innerText = '📋 Sao chép Mã'; }, 1500);
+    });
+
+    this.btnCloseActivation.addEventListener('click', () => {
+      this.hideActivationModal();
+      this.setStatus('⚠️ Chưa kích hoạt', false);
+      this.currentMsgBar.innerText = '⚠️ Thiết bị chưa kích hoạt. Bấm ⚙ Cài đặt → "Kích hoạt lại bằng OTP" để thử lại.';
+    });
   }
 
   setStatus(text, connected = true) {
@@ -129,7 +218,7 @@ class LilyPWA {
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
     if (role === 'ai') {
-      bubble.innerHTML = `<span class="author">🤖 Tony</span>${content}`;
+      bubble.innerHTML = `<span class="author">🌸 Lily</span>${content}`;
     } else {
       bubble.innerText = content;
     }
@@ -137,51 +226,175 @@ class LilyPWA {
     this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
   }
 
-  async fetchOtaConfig() {
-    try {
-      const resp = await fetch('https://api.tenclass.net/xiaozhi/ota/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Device-Id': CONFIG.deviceId,
-          'Client-Id': CONFIG.clientId
-        },
-        body: JSON.stringify({
-          application: { version: '1.7.2' },
-          board: { name: 'xiaozhi-test' }
-        })
-      });
+  // ================= ACTIVATION (OTA + OTP) =================
+  // Payload/headers đồng bộ với DeviceActivationService.cs (Xiaozhi.Protocols)
+  // để server xiaozhi.me nhận đúng serial_number, tránh lỗi "Serial number required/invalid".
+  async requestOta() {
+    const mac = CONFIG.deviceId;
+    const clientId = CONFIG.clientId;
+    const serial = CONFIG.serialNumber;
 
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data && data.websocket) {
-          if (data.websocket.url) this.dynamicWsUrl = data.websocket.url;
-          if (data.websocket.token) this.dynamicToken = data.websocket.token;
-          console.log('OTA Handshake success:', data.websocket);
-        }
-      }
+    const payload = {
+      application: {
+        version: APP_VERSION,
+        elf_sha256: clientId
+      },
+      board: {
+        type: BOARD_TYPE,
+        name: APP_NAME,
+        mac: mac,
+        mac_address: mac,
+        serial_number: serial,
+        sn: serial
+      },
+      mac: mac,
+      mac_address: mac,
+      serial_number: serial,
+      sn: serial
+    };
+
+    const resp = await fetch(OTA_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Device-Id': mac,
+        'Client-Id': clientId,
+        'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
+        'Accept-Language': 'zh-CN',
+        'Activation-Version': APP_VERSION,
+        'Mac-Address': mac,
+        'Serial-Number': serial
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const text = await resp.text();
+    try {
+      return JSON.parse(text);
     } catch (e) {
-      console.warn('OTA handshake error:', e);
+      console.warn('OTA response not JSON:', text);
+      return null;
     }
   }
 
+  async startActivationFlow() {
+    if (CONFIG.isActivated) {
+      this.connect();
+      return;
+    }
+
+    this.setStatus('⏳ Đang kết nối OTA...', false);
+    this.currentMsgBar.innerText = '⏳ Đang kết nối OTA Server lấy mã kích hoạt...';
+
+    let data;
+    try {
+      data = await this.requestOta();
+    } catch (e) {
+      console.warn('OTA handshake error:', e);
+      this.setStatus('⚠️ Không kết nối được OTA', false);
+      this.currentMsgBar.innerText = '⚠️ Không kết nối được OTA Server. Kiểm tra mạng rồi bấm 🔄 để thử lại.';
+      return;
+    }
+
+    this.applyOtaResult(data);
+  }
+
+  applyOtaResult(data) {
+    if (!data) {
+      this.setStatus('⚠️ OTA phản hồi không hợp lệ', false);
+      return false;
+    }
+
+    // Trường hợp thiết bị đã kích hoạt từ trước (token nằm trực tiếp hoặc trong websocket.*)
+    const directToken = data.token || (data.websocket && data.websocket.token);
+    if (directToken) {
+      const wsUrl = (data.websocket && data.websocket.url) || CONFIG.wsUrl;
+      CONFIG.save(wsUrl, directToken, CONFIG.deviceId, CONFIG.clientId);
+      this.hideActivationModal();
+      this.connect();
+      return true;
+    }
+
+    // Trường hợp cần nhập OTP trên xiaozhi.me
+    const code = (data.activation && data.activation.code) || data.code || data.activation_code || data.otp;
+    if (code) {
+      this.showActivationModal(code);
+      this.startPolling();
+      return false;
+    }
+
+    this.setStatus('⚠️ Server chưa cấp mã OTP', false);
+    this.currentMsgBar.innerText = '⚠️ Server chưa cấp mã OTP cho thiết bị này. Bấm 🔄 để thử lại.';
+    return false;
+  }
+
+  showActivationModal(code) {
+    this.activationCode.innerText = code;
+    this.activationSerial.innerText = CONFIG.serialNumber;
+    this.activationLink.href = `https://xiaozhi.me/active?code=${code}`;
+    this.activationStatus.innerText = '👉 Mở xiaozhi.me, nhập Mã xác minh + Số Serial ở trên để kích hoạt.';
+    this.activationModal.classList.add('open');
+    this.setStatus('⏳ Chờ kích hoạt trên xiaozhi.me...', false);
+  }
+
+  hideActivationModal() {
+    this.activationModal.classList.remove('open');
+    this.stopPolling();
+  }
+
+  startPolling() {
+    this.stopPolling();
+    this.pollTimer = setInterval(async () => {
+      let data;
+      try {
+        data = await this.requestOta();
+      } catch (e) {
+        return;
+      }
+      if (this.applyOtaResult(data)) {
+        this.activationStatus.innerText = '🎉 Kích hoạt thành công!';
+      }
+    }, 3000);
+  }
+
+  stopPolling() {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  // ================= WEBSOCKET =================
   async connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    this.setStatus('Đang kết nối OTA...', false);
-    await this.fetchOtaConfig();
+    if (!CONFIG.isActivated) {
+      // Chưa có token hợp lệ -> chạy lại luồng kích hoạt thay vì kết nối với token rác.
+      this.startActivationFlow();
+      return;
+    }
+
+    this.setStatus('🔄 Đang kết nối...', false);
+    this.receivedHello = false;
+    this.connectStartTs = Date.now();
 
     try {
-      let targetWsUrl = this.dynamicWsUrl || CONFIG.wsUrl;
-      let targetToken = this.dynamicToken || CONFIG.token;
+      let targetWsUrl = CONFIG.wsUrl;
+      const targetToken = CONFIG.token;
 
+      // GHI CHÚ QUAN TRỌNG: WebSocket API chuẩn của trình duyệt KHÔNG cho phép set custom
+      // HTTP header (Authorization/Device-Id/Client-Id) như XiaozhiWebSocketClient.cs (bản
+      // Windows/iOS) đang làm. Đây là giới hạn nền tảng, không phải lỗi code. Cách duy nhất
+      // có thể làm từ trình duyệt là gửi kèm qua query string - CHỈ hoạt động nếu server
+      // xiaozhi.me hỗ trợ xác thực qua query string; nếu server bắt buộc header, kết nối sẽ
+      // bị đóng ngay lập tức và app sẽ báo rõ nguyên nhân bên dưới (onclose).
       const params = [];
       if (targetToken) params.push(`token=${encodeURIComponent(targetToken)}`);
       if (CONFIG.deviceId) params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
       if (CONFIG.clientId) params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
-      params.push(`protocol_version=2`);
+      params.push('protocol_version=2');
 
       if (params.length > 0) {
         targetWsUrl += (targetWsUrl.includes('?') ? '&' : '?') + params.join('&');
@@ -193,6 +406,7 @@ class LilyPWA {
 
       this.ws.onopen = () => {
         this.isConnected = true;
+        this.consecutiveFailures = 0;
         this.setStatus('✅ Sẵn sàng', true);
         this.currentMsgBar.innerText = '✅ Đã kết nối với trợ lý Lily!';
         this.sendHello();
@@ -212,14 +426,24 @@ class LilyPWA {
 
       this.ws.onclose = (ev) => {
         this.isConnected = false;
-        const errText = ev.code ? `Mất kết nối (${ev.code})` : 'Mất kết nối';
-        this.setStatus(errText, false);
+        const msSinceConnect = Date.now() - (this.connectStartTs || 0);
+        const immediateReject = !this.receivedHello && msSinceConnect < 2000;
+
+        if (immediateReject) {
+          this.consecutiveFailures++;
+          this.setStatus(`Máy chủ từ chối kết nối (${ev.code})`, false);
+          this.currentMsgBar.innerText = '⚠️ Máy chủ đóng kết nối ngay lập tức. Có thể do trình duyệt không gửi được header xác thực (giới hạn WebSocket API), hoặc Token/Serial chưa đúng. Kiểm tra ⚙ Cài đặt hoặc dùng bản Windows/iOS để xác thực đầy đủ.';
+        } else {
+          const errText = ev.code ? `Mất kết nối (${ev.code})` : 'Mất kết nối';
+          this.setStatus(errText, false);
+          this.currentMsgBar.innerText = `⚠️ ${errText}. Đang tự động thử kết nối lại...`;
+        }
         console.warn('WebSocket Closed Code:', ev.code, 'Reason:', ev.reason);
-        this.currentMsgBar.innerText = `⚠️ ${errText}. Bấm ⚙ Cài đặt để kiểm tra Token / URL Server.`;
-        
-        // Auto-reconnect after 3s
+
+        // Auto-reconnect với backoff tăng dần khi liên tục thất bại, tránh spam server/CPU.
+        const delay = Math.min(3000 * (1 + this.consecutiveFailures), 30000);
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-        this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+        this.reconnectTimer = setTimeout(() => this.connect(), delay);
       };
 
       this.ws.onerror = (err) => {
@@ -233,6 +457,8 @@ class LilyPWA {
   }
 
   reconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.consecutiveFailures = 0;
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -261,6 +487,7 @@ class LilyPWA {
 
     switch (msg.type) {
       case 'hello':
+        this.receivedHello = true;
         this.setStatus('✅ Sẵn sàng', true);
         break;
 
@@ -339,7 +566,7 @@ class LilyPWA {
 
   async startRecording() {
     await this.initAudioContext();
-    if (!this.isConnected) this.connect();
+    if (!this.isConnected && CONFIG.isActivated) this.connect();
 
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -377,7 +604,7 @@ class LilyPWA {
       processor.onaudioprocess = (e) => {
         if (!this.isRecording) return;
         const inputData = e.inputBuffer.getChannelData(0);
-        
+
         // VAD Calculation
         let sum = 0;
         for (let i = 0; i < inputData.length; i++) {
@@ -484,9 +711,9 @@ class LilyPWA {
   handleLocalResponse(userText) {
     this.setStatus('🌐 Chế độ Ngoại tuyến / Web Voice', true);
     this.setSpeaking(true);
-    
+
     let reply = "Dạ, Lily đã nhận được câu hỏi: \"" + userText + "\". Hiện tại kết nối Server OTA tạm bận, Lily đang hỗ trợ bạn bằng giọng nói trình duyệt nhé!";
-    
+
     if (userText.toLowerCase().includes("chào") || userText.toLowerCase().includes("hello")) {
       reply = "Xin chào bạn! Mình là Lily - Trợ lý ảo AI thông minh. Mình có thể giúp gì cho bạn hôm nay?";
     } else if (userText.toLowerCase().includes("tên") || userText.toLowerCase().includes("ai")) {
