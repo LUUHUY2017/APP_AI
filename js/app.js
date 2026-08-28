@@ -605,22 +605,36 @@ ${text}
     try {
       this.recognition = new SpeechRecognition();
       this.recognition.lang = 'vi-VN';
-      this.recognition.interimResults = false;
+      this.recognition.interimResults = true; // Hiện chữ tức thì thời gian thực (Realtime STT)
       this.recognition.continuous = false;
+      this.recognition.maxAlternatives = 1;
 
       this.isRecording = true;
       this.talkBtn.classList.add('recording');
       this.talkBtnIcon.innerText = '⏹';
       this.talkBtnText.innerText = 'Đang nghe...';
       this.avatarRing.classList.add('pulsing');
-      this.currentMsgBar.innerText = '🎤 Đang nghe giọng nói của bạn...';
+      this.currentMsgBar.innerText = '🎤 Đang lắng nghe giọng nói...';
+
+      let finalTranscript = '';
 
       this.recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        if (text) {
-          this.appendMessage(text, 'user');
-          this.currentMsgBar.innerText = `Bạn nói: "${text}"`;
-          this.handleResponse(text);
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (interimTranscript) {
+          this.currentMsgBar.innerText = `🎙️ "${interimTranscript}"`;
+        }
+        if (finalTranscript) {
+          const spokenText = finalTranscript.trim();
+          this.appendMessage(spokenText, 'user');
+          this.currentMsgBar.innerText = `Bạn nói: "${spokenText}"`;
+          this.handleResponse(spokenText);
         }
       };
 
@@ -659,23 +673,40 @@ ${text}
   }
 
   handleResponse(userText) {
+    if (!userText || !userText.trim()) return;
     this.setSpeaking(true);
-    let reply = `Dạ, Lily đã nhận được câu hỏi: "${userText}". Mình là trợ lý AI, luôn sẵn sàng hỗ trợ bạn!`;
 
-    const lower = userText.toLowerCase();
-    if (lower.includes("chào") || lower.includes("hello")) {
-      reply = "Xin chào bạn! Mình là Lily - Trợ lý ảo AI thông minh. Mình có thể giúp gì cho bạn hôm nay?";
-    } else if (lower.includes("tên") || lower.includes("bạn là ai")) {
-      reply = "Mình là Lily, trợ lý giọng nói thông minh được xây dựng để trò chuyện cùng bạn bằng tiếng Việt!";
-    } else if (lower.includes("thời tiết")) {
-      reply = "Hôm nay thời tiết rất đẹp và thoáng mát. Chúc bạn một ngày làm việc tràn đầy năng lượng nhé!";
+    // Gửi trực tiếp qua WebSocket tới Server Xiaozhi nếu kết nối đang mở
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify({
+          type: "listen",
+          state: "detect",
+          text: userText
+        }));
+      } catch (e) {}
     }
 
-    setTimeout(() => {
-      this.appendMessage(reply, 'ai');
-      this.currentMsgBar.innerText = reply;
-      this.speakLocalText(reply);
-    }, 400);
+    // Xử lý phản hồi AI siêu tốc (0ms delay)
+    let reply = `Dạ, Lily nghe rõ: "${userText}". Mình luôn sẵn sàng hỗ trợ bạn!`;
+    const lower = userText.toLowerCase();
+    if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi")) {
+      reply = "Xin chào! Mình là Lily, rất vui được trò chuyện cùng bạn. Hôm nay mình có thể giúp gì cho bạn?";
+    } else if (lower.includes("tên") || lower.includes("bạn là ai") || lower.includes("ai đó")) {
+      reply = "Mình là trợ lý ảo Lily AI, phát triển để đồng hành và hỗ trợ bạn trong công việc và cuộc sống!";
+    } else if (lower.includes("thời tiết")) {
+      reply = "Hôm nay thời tiết rất đẹp và dễ chịu. Chúc bạn một ngày làm việc thật nhiều niềm vui và hiệu quả nhé!";
+    } else if (lower.includes("mấy giờ") || lower.includes("thời gian")) {
+      const now = new Date();
+      reply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
+    } else if (lower.includes("cảm ơn") || lower.includes("thank")) {
+      reply = "Không có chi đâu ạ! Bất cứ khi nào bạn cần, Lily luôn ở đây nhé.";
+    }
+
+    // Phản hồi tức thì không độ trễ
+    this.appendMessage(reply, 'ai');
+    this.currentMsgBar.innerText = reply;
+    this.speakLocalText(reply);
   }
 
   speakLocalText(text) {
@@ -684,8 +715,8 @@ ${text}
     const cleanText = text.replace(/<[^>]*>/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'vi-VN';
-    utterance.rate = 1.0;
-    utterance.pitch = 1.1;
+    utterance.rate = 1.08; // Tốc độ nói nhanh, linh hoạt như người thật
+    utterance.pitch = 1.05;
 
     const voices = window.speechSynthesis.getVoices();
     const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VN'));
