@@ -3,170 +3,194 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lily AI - Trợ Lý Ảo Giọng Nói Thông Minh</title>
+  <title>Lily AI — Trợ Lý Giọng Nói Thông Minh</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a162b">
+  <meta name="theme-color" content="#0a0814">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- Ambient Cosmic Glow Backgrounds -->
+  <div class="ambient-glow glow-top"></div>
+  <div class="ambient-glow glow-bottom"></div>
+
   <div id="app-container">
     <!-- Top Header -->
     <header class="app-header">
       <div class="brand">
-        <div class="logo-circle">🌸</div>
-        <div class="brand-text">
-          <h1>Lily AI</h1>
+        <div class="brand-avatar-mini">
+          <span>🌸</span>
+        </div>
+        <div class="brand-info">
+          <div class="brand-title-row">
+            <h1 class="brand-name">Lily AI</h1>
+            <span class="badge-version">v1.2</span>
+          </div>
           <div class="status-indicator">
-            <span id="status-dot" class="dot"></span>
-            <span id="status-text">Đang kết nối...</span>
+            <span id="status-dot" class="dot active"></span>
+            <span id="status-text">Web Voice Sẵn sàng</span>
           </div>
         </div>
       </div>
+
       <div class="header-actions">
-        <button id="btn-hands-free" class="icon-btn" title="Chế độ Rảnh tay">
+        <button id="btn-hands-free" class="glass-btn-pill" title="Chế độ Rảnh tay">
           <span class="btn-icon">🎙️</span>
-          <span class="btn-label">Rảnh tay: Tắt</span>
+          <span class="btn-text">Rảnh tay</span>
         </button>
-        <button id="btn-refresh" class="icon-btn" title="Kết nối lại">
-          <span class="btn-icon">🔄</span>
+        <button id="btn-refresh" class="glass-icon-btn" title="Tải lại kết nối">
+          <span>🔄</span>
         </button>
-        <button id="btn-settings" class="icon-btn" title="Cài đặt kết nối">
-          <span class="btn-icon">⚙️</span>
+        <button id="btn-settings" class="glass-icon-btn" title="Cài đặt cấu hình">
+          <span>⚙️</span>
         </button>
       </div>
     </header>
 
-    <!-- Main Chat Area -->
+    <!-- Main Chat & AI Visualizer Area -->
     <main class="chat-wrapper">
+      <!-- AI Interactive Orb / Voice Visualizer -->
+      <div class="ai-hero-visualizer">
+        <div class="orb-outer" id="avatar-ring">
+          <div class="orb-wave wave-1"></div>
+          <div class="orb-wave wave-2"></div>
+          <div class="orb-core">
+            <span class="orb-emoji" id="avatar-emoji">🌸</span>
+          </div>
+        </div>
+        <div id="current-msg-bar" class="live-subtitle">
+          ✨ Sẵn sàng trò chuyện cùng bạn
+        </div>
+      </div>
+
+      <!-- Chat Bubble Stream -->
       <div id="chat-container" class="chat-container">
         <div class="chat-bubble ai welcome-msg">
-          <span class="author">🌸 Lily</span>
-          Xin chào! Mình là Lily, trợ lý AI giọng nói thông minh. Bấm nút 🎤 bên dưới để trò chuyện cùng mình nhé!
+          <div class="bubble-header">
+            <span class="bubble-author">🌸 Lily AI</span>
+            <span class="bubble-time">Vừa xong</span>
+          </div>
+          <div class="bubble-content">
+            Xin chào! Mình là <strong>Lily</strong> — Trợ lý ảo giọng nói AI. Bấm nút <span class="highlight-pill">🎤 Bấm để nói</span> bên dưới hoặc gõ câu hỏi để trò chuyện cùng mình nhé!
+          </div>
         </div>
       </div>
     </main>
 
-    <!-- Bottom Interactive Control Bar -->
+    <!-- Bottom Control Deck -->
     <footer class="app-footer">
-      <div id="current-msg-bar" class="current-msg-bar">
-        ✨ Sẵn sàng trò chuyện cùng Lily
+      <!-- Voice Action Center -->
+      <div class="voice-hero-action">
+        <div class="talk-hint-badge" id="talk-hint">👇 Chạm để nói chuyện với Lily</div>
+        <button id="talk-btn" class="main-talk-btn">
+          <div class="mic-glow"></div>
+          <span id="talk-btn-icon" class="mic-icon">🎤</span>
+          <span id="talk-btn-text" class="mic-text">Bấm để nói</span>
+        </button>
       </div>
 
       <!-- Text Query Bar -->
-      <div class="text-input-wrapper">
-        <input type="text" id="text-input" placeholder="Gõ câu hỏi vào đây..." autocomplete="off">
-        <button id="btn-send" class="btn-send">Gửi</button>
-      </div>
-
-      <!-- Voice Talk Controls -->
-      <div class="voice-controls">
-        <button id="btn-abort" class="abort-btn" title="Ngắt lời AI">
-          <div class="avatar-ring" id="avatar-ring">
-            <span class="avatar-emoji" id="avatar-emoji">🌸</span>
-          </div>
-        </button>
-        
-        <div class="talk-action-wrapper">
-          <div class="talk-hint" id="talk-hint">👇 Bấm để nói (nói xong tự gửi)</div>
-          <button id="talk-btn" class="talk-btn">
-            <span id="talk-btn-icon" class="mic-icon">🎤</span>
-            <span id="talk-btn-text" class="mic-text">Bấm để nói</span>
+      <div class="dock-input-bar">
+        <div class="input-inner-glass">
+          <input type="text" id="text-input" placeholder="Nhập câu hỏi hoặc yêu cầu..." autocomplete="off">
+          <button id="btn-send" class="btn-send-glass" title="Gửi tin nhắn">
+            <span>➤</span>
           </button>
         </div>
       </div>
     </footer>
 
-    <!-- SETTINGS MODAL (Matching MAUI / WPF .exe) -->
+    <!-- SETTINGS MODAL -->
     <div id="settings-modal" class="modal-overlay">
-      <div class="modal-content modal-scrollable">
+      <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">⚙️ Cài Đặt Cấu Hình Server</div>
-          <button id="btn-close-modal-x" class="close-x">&times;</button>
+          <div class="modal-header-left">
+            <span class="modal-icon">⚙️</span>
+            <div>
+              <h2 class="modal-title">Cài Đặt Cấu Hình Server</h2>
+              <p class="modal-subtitle">Xiaozhi Tenclass & Giao Thức eFuse</p>
+            </div>
+          </div>
+          <button id="btn-close-modal-x" class="btn-close-modal">&times;</button>
         </div>
         
         <div class="modal-body">
-          <p class="modal-desc">Tùy chỉnh thông số kết nối Xiaozhi Server (Tenclass):</p>
-
           <!-- OTP Activation Card -->
           <div class="otp-card">
             <div class="otp-card-header">
-              <span class="otp-card-icon">🔑</span>
+              <span class="otp-badge-icon">🔑</span>
               <div>
-                <div class="otp-card-title">Kích hoạt & Tự động lấy Token (Mã OTP)</div>
-                <div class="otp-card-subtitle" id="otp-status-text">Bấm '⚡ Tạo mã OTP' để lấy mã 6 số ghép nối trên xiaozhi.me</div>
+                <div class="otp-card-title">Kích Hoạt & Tự Động Nhận Token (OTP)</div>
+                <div class="otp-card-desc" id="otp-status-text">Bấm <strong>⚡ Tạo mã OTP</strong> để ghép nối thiết bị trên <code>xiaozhi.me</code></div>
               </div>
             </div>
 
-            <div class="otp-grid">
-              <div class="otp-box-col">
-                <div class="otp-box-label">
-                  <span>Mã xác minh (OTP):</span>
-                  <button id="btn-copy-otp" class="btn-xs">📋 Chép</button>
+            <div class="otp-metrics-grid">
+              <div class="metric-card">
+                <div class="metric-head">
+                  <span>Mã Xác Minh (OTP):</span>
+                  <button id="btn-copy-otp" class="btn-action-copy">📋 Chép</button>
                 </div>
-                <div class="otp-display-box" id="otp-code-box">------</div>
+                <div class="metric-val metric-code" id="otp-code-box">------</div>
               </div>
 
-              <div class="otp-box-col">
-                <div class="otp-box-label">
-                  <span>Số Serial (MAC):</span>
-                  <button id="btn-copy-serial" class="btn-xs">📋 Chép</button>
+              <div class="metric-card">
+                <div class="metric-head">
+                  <span>Số Serial (eFuse):</span>
+                  <button id="btn-copy-serial" class="btn-action-copy">📋 Chép</button>
                 </div>
-                <div class="otp-serial-box" id="otp-serial-box">------</div>
+                <div class="metric-val metric-serial" id="otp-serial-box">------</div>
               </div>
             </div>
 
-            <div class="otp-actions-grid">
-              <button id="btn-get-otp" class="btn-action-primary">⚡ Tạo mã OTP</button>
-              <a id="btn-open-xiaozhi" href="https://xiaozhi.me" target="_blank" class="btn-action-secondary disabled">🌐 Mở Web Kích hoạt</a>
+            <div class="otp-btn-grid">
+              <button id="btn-get-otp" class="btn-gradient-cyan">⚡ Tạo mã OTP mới</button>
+              <a id="btn-open-xiaozhi" href="https://xiaozhi.me" target="_blank" class="btn-gradient-purple disabled">🌐 Mở Web Kích Hoạt</a>
             </div>
 
-            <!-- Debug OTA Log Box -->
-            <div class="ota-log-wrapper">
-              <div class="ota-log-label">📜 Nhật ký Gói tin OTA (Request & Response):</div>
-              <textarea id="ota-log-box" readonly placeholder="Bấm 'Tạo mã OTP' để xem chi tiết gói tin gửi đi và phản hồi từ Server..."></textarea>
+            <!-- Debug Live Logs -->
+            <div class="ota-log-section">
+              <div class="log-header-text">📜 Nhật ký Gói tin OTA (Request & Response):</div>
+              <textarea id="ota-log-box" readonly placeholder="Nhật ký gói tin OTA sẽ hiển thị tại đây khi bạn bấm 'Tạo mã OTP'..."></textarea>
             </div>
           </div>
 
-          <!-- Server WebSocket URL -->
-          <div class="form-group">
-            <label>Server WebSocket URL:</label>
-            <input type="text" id="cfg-ws-url" placeholder="wss://api.tenclass.net/xiaozhi/v1/">
+          <!-- Server Fields -->
+          <div class="field-group">
+            <label class="field-label">Server WebSocket URL</label>
+            <input type="text" id="cfg-ws-url" class="field-input" placeholder="wss://api.tenclass.net/xiaozhi/v1/">
           </div>
 
-          <!-- Access Token -->
-          <div class="form-group">
-            <div class="label-with-action">
-              <label>Access Token / Auth Token:</label>
-              <button id="btn-paste-token" class="btn-xs">📋 Dán</button>
+          <div class="field-group">
+            <div class="field-label-row">
+              <label class="field-label">Access Token (Auth Token)</label>
+              <button id="btn-paste-token" class="btn-action-copy">📋 Dán</button>
             </div>
-            <input type="text" id="cfg-token" placeholder="Token xác thực (hoặc tự động nhận qua OTP)">
+            <input type="text" id="cfg-token" class="field-input" placeholder="Token xác thực (hoặc tự động nhận qua OTP)">
           </div>
 
-          <!-- Device MAC Address -->
-          <div class="form-group">
-            <div class="label-with-action">
-              <label>Device MAC Address (Device-Id):</label>
-              <button id="btn-random-mac" class="btn-xs">🎲 Tạo MAC Mới</button>
+          <div class="field-group">
+            <div class="field-label-row">
+              <label class="field-label">Device MAC Address (Device-Id)</label>
+              <button id="btn-random-mac" class="btn-action-copy">🎲 Tạo MAC Mới</button>
             </div>
-            <input type="text" id="cfg-device-id" placeholder="cc:30:80:20:64:7c">
+            <input type="text" id="cfg-device-id" class="field-input" placeholder="cc:30:80:20:64:7c">
           </div>
 
-          <!-- Client ID -->
-          <div class="form-group">
-            <label>Client ID:</label>
-            <input type="text" id="cfg-client-id" placeholder="a927bd19-f917-4a3a-9f5a-4e453603c9b4">
+          <div class="field-group">
+            <label class="field-label">Client ID</label>
+            <input type="text" id="cfg-client-id" class="field-input" placeholder="a927bd19-f917-4a3a-9f5a-4e453603c9b4">
           </div>
         </div>
 
         <div class="modal-footer">
-          <button id="btn-reset-default" class="btn-secondary">🔄 Khôi phục mặc định</button>
-          <button id="btn-save-settings" class="btn-primary">💾 Lưu & Kết nối</button>
+          <button id="btn-reset-default" class="btn-modal-danger">🔄 Khôi phục mặc định</button>
+          <button id="btn-save-settings" class="btn-modal-save">💾 Lưu & Kết nối</button>
         </div>
       </div>
     </div>
