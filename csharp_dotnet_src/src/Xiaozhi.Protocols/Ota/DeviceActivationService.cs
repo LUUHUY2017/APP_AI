@@ -108,29 +108,7 @@ public class DeviceActivationService
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;
 
-            // 1. Kiểm tra nếu có mã OTP yêu cầu kích hoạt (activation.code)
-            if (root.TryGetProperty("activation", out var actElem))
-            {
-                result.IsActivated = false;
-                if (actElem.TryGetProperty("code", out var codeProp)) result.Code = codeProp.GetString();
-                if (actElem.TryGetProperty("url", out var urlProp)) result.QrUrl = urlProp.GetString();
-                if (actElem.TryGetProperty("message", out var msgProp)) result.Message = msgProp.GetString();
-                if (!string.IsNullOrEmpty(result.Code)) return result;
-            }
-
-            // Parse direct properties: code, activation_code, otp, verification_code
-            string[] possibleCodeProps = { "code", "activation_code", "otp", "verification_code", "challenge" };
-            foreach (var prop in possibleCodeProps)
-            {
-                if (root.TryGetProperty(prop, out var codeElem))
-                {
-                    result.Code = codeElem.GetString();
-                    result.QrUrl = $"https://xiaozhi.me/active?code={result.Code}";
-                    return result;
-                }
-            }
-
-            // 2. Trích xuất Token và WebSocket URL từ top-level hoặc lồng trong đối tượng 'websocket'
+            // 1. Luôn trích xuất Token và WebSocket URL nếu có trong response bất kể có mã activation hay không
             string? token = null;
             string? wsUrl = null;
 
@@ -149,11 +127,38 @@ public class DeviceActivationService
                 wsUrl = topWsProp.GetString();
             }
 
+            result.Token = token;
+            result.WebSocketUrl = wsUrl ?? "wss://api.tenclass.net/xiaozhi/v1/";
+
+            // 2. Kiểm tra nếu có mã OTP yêu cầu kích hoạt (activation.code)
+            if (root.TryGetProperty("activation", out var actElem))
+            {
+                if (actElem.TryGetProperty("code", out var codeProp)) result.Code = codeProp.GetString();
+                if (actElem.TryGetProperty("url", out var urlProp)) result.QrUrl = urlProp.GetString();
+                if (actElem.TryGetProperty("message", out var msgProp)) result.Message = msgProp.GetString();
+                if (!string.IsNullOrEmpty(result.Code))
+                {
+                    // Nếu server chưa trả token chính thức mà có mã OTP, đánh dấu chưa kích hoạt hoàn toàn nhưng vẫn giữ token tạm (nếu có)
+                    result.IsActivated = string.IsNullOrEmpty(result.Code);
+                    return result;
+                }
+            }
+
+            // Parse direct properties: code, activation_code, otp, verification_code
+            string[] possibleCodeProps = { "code", "activation_code", "otp", "verification_code" };
+            foreach (var prop in possibleCodeProps)
+            {
+                if (root.TryGetProperty(prop, out var codeElem))
+                {
+                    result.Code = codeElem.GetString();
+                    result.QrUrl = $"https://xiaozhi.me/active?code={result.Code}";
+                    return result;
+                }
+            }
+
             if (!string.IsNullOrEmpty(token))
             {
                 result.IsActivated = true;
-                result.Token = token;
-                result.WebSocketUrl = wsUrl ?? "wss://api.tenclass.net/xiaozhi/v1/";
                 return result;
             }
 

@@ -61,12 +61,17 @@ public partial class SettingsPage : ContentPage
 
         OtaLogEditor.Text = $"📤 GÓI TIN GỬI ĐI (REQUEST):\n{result.RawRequest}\n\n📥 PHẢN HỒI NGUYÊN VĂN TỪ SERVER (RESPONSE):\n{result.RawResponse}";
 
-        if (result.IsActivated && !string.IsNullOrEmpty(result.Token))
+        if (!string.IsNullOrEmpty(result.Token))
         {
             TokenEntry.Text = result.Token;
+            if (!string.IsNullOrEmpty(result.WebSocketUrl)) WsUrlEntry.Text = result.WebSocketUrl;
+            SaveConfigToStorage(WsUrlEntry.Text, result.Token, macAddress, deviceId);
+        }
+
+        if (result.IsActivated && !string.IsNullOrEmpty(result.Token))
+        {
             OtpCodeLabel.Text = "ACTIVE";
             OtpStatusLabel.Text = "🎉 Thiết bị đã được kích hoạt thành công!";
-            SaveConfigToStorage(WsUrlEntry.Text, result.Token, macAddress, deviceId);
             return;
         }
 
@@ -76,7 +81,7 @@ public partial class SettingsPage : ContentPage
             _activeWebUrl = result.QrUrl ?? $"https://xiaozhi.me/active?code={code}";
 
             OtpCodeLabel.Text = code;
-            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh: {code} và Số Serial: {serialNumber} trên trang xiaozhi.me:";
+            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh {code} trên trang xiaozhi.me (Token WebSocket đã được tự động lưu vào App):";
             OpenActiveWebBtn.IsEnabled = true;
         }
         else
@@ -251,6 +256,12 @@ public partial class SettingsPage : ContentPage
         config.SystemOptions.DeviceId = deviceId;
         config.SystemOptions.ClientId = clientId;
         ConfigManager.Instance.SaveConfig(config);
+
+        var efuse = ConfigManager.Instance.Efuse ?? new EfuseConfig();
+        efuse.MacAddress = deviceId;
+        efuse.SerialNumber = DeviceFingerprint.GenerateSerialNumber(deviceId);
+        efuse.HmacKey = DeviceFingerprint.GenerateHmacKey(deviceId);
+        ConfigManager.Instance.SaveEfuse(efuse);
     }
 
     private async void OnResetClicked(object sender, EventArgs e)

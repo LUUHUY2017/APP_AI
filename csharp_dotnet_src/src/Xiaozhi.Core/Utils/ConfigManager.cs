@@ -16,11 +16,16 @@ public class ConfigManager
         "XiaozhiLily");
     private static readonly string ConfigPath = Path.Combine(ConfigDir, "config.json");
 
+    private static readonly string EfusePath = Path.Combine(ConfigDir, "efuse.json");
+    private static readonly string LocalEfusePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config", "efuse.json");
+
     public AppConfig Config { get; private set; }
+    public EfuseConfig Efuse { get; private set; }
 
     private ConfigManager()
     {
         Config = LoadOrCreate();
+        Efuse = LoadOrCreateEfuse();
     }
 
     private AppConfig LoadOrCreate()
@@ -38,6 +43,31 @@ public class ConfigManager
         var config = CreateDefault();
         SaveConfig(config);
         return config;
+    }
+
+    private EfuseConfig LoadOrCreateEfuse()
+    {
+        try
+        {
+            if (File.Exists(EfusePath))
+            {
+                var json = File.ReadAllText(EfusePath);
+                var efuse = JsonSerializer.Deserialize<EfuseConfig>(json);
+                if (efuse != null && !string.IsNullOrWhiteSpace(efuse.MacAddress)) return efuse;
+            }
+
+            if (File.Exists(LocalEfusePath))
+            {
+                var json = File.ReadAllText(LocalEfusePath);
+                var efuse = JsonSerializer.Deserialize<EfuseConfig>(json);
+                if (efuse != null && !string.IsNullOrWhiteSpace(efuse.MacAddress)) return efuse;
+            }
+        }
+        catch { }
+
+        var defaultEfuse = CreateDefaultEfuse();
+        SaveEfuse(defaultEfuse);
+        return defaultEfuse;
     }
 
     private AppConfig CreateDefault()
@@ -67,6 +97,19 @@ public class ConfigManager
         };
     }
 
+    private EfuseConfig CreateDefaultEfuse()
+    {
+        var mac = Config?.SystemOptions?.DeviceId ?? "cc:30:80:20:64:7c";
+        var serial = DeviceFingerprint.GenerateSerialNumber(mac);
+        return new EfuseConfig
+        {
+            MacAddress = mac,
+            SerialNumber = serial,
+            HmacKey = DeviceFingerprint.GenerateHmacKey(mac),
+            ActivationStatus = false
+        };
+    }
+
     public void SaveConfig(AppConfig config)
     {
         try
@@ -75,6 +118,18 @@ public class ConfigManager
             var options = new JsonSerializerOptions { WriteIndented = true };
             File.WriteAllText(ConfigPath, JsonSerializer.Serialize(config, options));
             Config = config;
+        }
+        catch { }
+    }
+
+    public void SaveEfuse(EfuseConfig efuse)
+    {
+        try
+        {
+            Directory.CreateDirectory(ConfigDir);
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(EfusePath, JsonSerializer.Serialize(efuse, options));
+            Efuse = efuse;
         }
         catch { }
     }
