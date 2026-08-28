@@ -46,13 +46,13 @@ public class ConfigManager
         {
             SystemOptions = new SystemOptions
             {
-                ClientId = Guid.NewGuid().ToString(),
-                DeviceId = GetMacAddress(),
+                ClientId = "a927bd19-f917-4a3a-9f5a-4e453603c9b4",
+                DeviceId = "cc:30:80:20:64:7c",
                 Network = new NetworkOptions
                 {
                     OtaVersionUrl = "https://api.tenclass.net/xiaozhi/ota/",
                     WebSocketUrl = "wss://api.tenclass.net/xiaozhi/v1/",
-                    WebSocketAccessToken = string.Empty,
+                    WebSocketAccessToken = "test-token",
                     AuthorizationUrl = "https://xiaozhi.me/"
                 }
             },

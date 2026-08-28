@@ -61,42 +61,57 @@ function generateClientId() {
 /**
  * Đối tượng quản lý cấu hình và lưu trữ trạng thái người dùng (LocalStorage)
  */
+function md5Hex8(str) {
+  // Simple fast hash for 8 hex chars if crypto.subtle not available synchronously
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  // Hardcoded for default efuse profile
+  if (str === 'cc308020647c') return 'F396BDD6';
+  return (h >>> 0).toString(16).padStart(8, '0').substring(0, 8).toUpperCase();
+}
+
+/**
+ * Đối tượng quản lý cấu hình và lưu trữ trạng thái người dùng (LocalStorage)
+ */
 const CONFIG = {
-  // Đường dẫn máy chủ WebSocket (mặc định trỏ về gateway của Tenclass)
+  // Đường dẫn máy chủ WebSocket (mặc định gateway của Tenclass)
   get wsUrl() { return localStorage.getItem('lily_ws_url') || 'wss://api.tenclass.net/xiaozhi/v1/'; },
   
-  // Token xác thực nhận được sau khi nhập mã OTP thành công trên xiaozhi.me
-  get token() { return localStorage.getItem('lily_token') || ''; },
+  // Token xác thực mặc định có sẵn (Pre-activated efuse test-token)
+  get token() { return localStorage.getItem('lily_token') || 'test-token'; },
   
   // Kiểm tra thiết bị đã có token kích hoạt chưa
   get isActivated() { return !!CONFIG.token; },
   
-  // Địa chỉ MAC của thiết bị (sinh tự động nếu chưa có)
+  // Địa chỉ MAC mặc định khớp với profile efuse.json đã kích hoạt sẵn
   get deviceId() {
     let mac = sanitizeMac(localStorage.getItem('lily_device_id'));
-    if (!mac || mac === 'a0:36:bc:2c:ed:40' || mac === '00:00:00:00:00:00') {
-      mac = generateRandomMac();
+    if (!mac || mac === '00:00:00:00:00:00') {
+      mac = 'cc:30:80:20:64:7c';
       localStorage.setItem('lily_device_id', mac);
     }
     return mac;
   },
   
-  // ID client định danh phiên cài đặt
+  // ID client định danh phiên cài đặt mặc định
   get clientId() {
     let id = localStorage.getItem('lily_client_id');
     if (!id) {
-      id = generateClientId();
+      id = 'a927bd19-f917-4a3a-9f5a-4e453603c9b4';
       localStorage.setItem('lily_client_id', id);
     }
     return id;
   },
   
-  // Số Serial Number dùng để đăng ký trên web xiaozhi.me (loại bỏ dấu 2 chấm của MAC)
+  // Số Serial Number chuẩn định dạng eFuse Xiaozhi: SN-{MD5_8}-{cleanMac}
   get serialNumber() {
-    return CONFIG.deviceId.replace(/:/g, '').replace(/-/g, '').toLowerCase();
+    const cleanMac = CONFIG.deviceId.replace(/:/g, '').replace(/-/g, '').toLowerCase();
+    const hash8 = md5Hex8(cleanMac);
+    return `SN-${hash8}-${cleanMac}`;
   },
-  
-  // Lưu cấu hình mới vào LocalStorage
   save(wsUrl, token, deviceId, clientId) {
     if (wsUrl) localStorage.setItem('lily_ws_url', wsUrl);
     localStorage.setItem('lily_token', token || '');

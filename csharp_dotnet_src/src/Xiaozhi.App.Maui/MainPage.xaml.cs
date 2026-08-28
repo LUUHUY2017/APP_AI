@@ -16,7 +16,7 @@ public partial class MainPage : ContentPage
 
     private string _wsUrl = "wss://api.tenclass.net/xiaozhi/v1/";
     private string _token = "test-token";
-    private string _deviceId = "a0:36:bc:2c:ed:40";
+    private string _deviceId = "cc:30:80:20:64:7c";
 
     private float _currentVolume = 1.0f;
     private readonly VoiceActivityDetector _vad = new();
