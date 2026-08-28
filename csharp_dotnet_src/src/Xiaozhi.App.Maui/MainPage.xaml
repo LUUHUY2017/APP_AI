@@ -4,74 +4,79 @@
              xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
              x:Class="Xiaozhi.App.Maui.MainPage"
              ios:Page.UseSafeArea="True"
-             BackgroundColor="#000000">
+             BackgroundColor="#0a0814">
 
-    <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="14,4,14,10" VerticalOptions="FillAndExpand">
-        <!-- Compact modern header -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="2,4,2,10">
-            <Image Grid.Column="0" Source="susu_logo.png" WidthRequest="32" HeightRequest="32"
-                   Aspect="AspectFit" VerticalOptions="Center" HorizontalOptions="Start" />
+    <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="14,6,14,12" VerticalOptions="FillAndExpand">
+        <!-- Modern Cyberpunk Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="2,4,2,10">
+            <Frame Grid.Column="0" WidthRequest="38" HeightRequest="38" CornerRadius="12" Padding="0"
+                   BackgroundColor="#8a2be2" BorderColor="#00f2fe" HasShadow="False" VerticalOptions="Center">
+                <Label Text="🌸" FontSize="20" HorizontalOptions="Center" VerticalOptions="Center" />
+            </Frame>
 
-            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center" HorizontalOptions="Start">
-                <Label Text="BACKEND AI ⌄" FontSize="16" FontAttributes="Bold"
-                       TextColor="#F5F7FA" LineBreakMode="NoWrap" HorizontalOptions="Start" />
-                <Label x:Name="StatusLabel" Text="✅ Sẵn sàng" FontSize="11"
-                       TextColor="#8F9BA8" LineBreakMode="TailTruncation" HorizontalOptions="Start" />
+            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center" HorizontalOptions="Start">
+                <HorizontalStackLayout Spacing="6">
+                    <Label Text="Lily AI" FontSize="17" FontAttributes="Bold" TextColor="#FFFFFF" />
+                    <Frame BackgroundColor="#1f1838" BorderColor="#00f2fe" CornerRadius="6" Padding="4,1" HasShadow="False" VerticalOptions="Center">
+                        <Label Text="v1.2" FontSize="9" FontAttributes="Bold" TextColor="#00f2fe" />
+                    </Frame>
+                </HorizontalStackLayout>
+                <Label x:Name="StatusLabel" Text="🟢 Lily AI Sẵn sàng" FontSize="11" TextColor="#a09cc0" />
             </VerticalStackLayout>
 
-            <HorizontalStackLayout Grid.Column="2" Spacing="4" VerticalOptions="Center">
-                <Button x:Name="HandsFreeBtn" Text="🎙 Rảnh tay" BackgroundColor="#171A20"
-                        TextColor="#B8C1CC" FontSize="11" FontAttributes="Bold"
-                        HeightRequest="36" Padding="10,0" CornerRadius="18"
-                        Clicked="OnHandsFreeClicked" ToolTipProperties.Text="Rảnh tay" />
-                <Button Text="↻" BackgroundColor="#171A20" TextColor="#B8C1CC"
-                        FontSize="19" WidthRequest="36" HeightRequest="36" CornerRadius="18"
-                        Padding="0" Clicked="OnRefreshClicked" ToolTipProperties.Text="Tải lại" />
-                <Button Text="⚙" BackgroundColor="#171A20" TextColor="#B8C1CC"
-                        FontSize="16" WidthRequest="36" HeightRequest="36" CornerRadius="18"
-                        Padding="0" Clicked="OnSettingsClicked" ToolTipProperties.Text="Cài đặt" />
+            <HorizontalStackLayout Grid.Column="2" Spacing="6" VerticalOptions="Center">
+                <Button x:Name="HandsFreeBtn" Text="🎙️ Rảnh tay" BackgroundColor="#1e1838"
+                        TextColor="#dcd8fc" FontSize="11" FontAttributes="Bold"
+                        HeightRequest="36" Padding="10,0" CornerRadius="18" BorderColor="#3b3370"
+                        Clicked="OnHandsFreeClicked" />
+                <Button Text="🔄" BackgroundColor="#1e1838" TextColor="#dcd8fc"
+                        FontSize="15" WidthRequest="36" HeightRequest="36" CornerRadius="10" BorderColor="#3b3370"
+                        Padding="0" Clicked="OnRefreshClicked" />
+                <Button Text="⚙️" BackgroundColor="#1e1838" TextColor="#dcd8fc"
+                        FontSize="15" WidthRequest="36" HeightRequest="36" CornerRadius="10" BorderColor="#3b3370"
+                        Padding="0" Clicked="OnSettingsClicked" />
             </HorizontalStackLayout>
         </Grid>
 
-        <!-- Gemini Chat Log Area -->
+        <!-- Chat Stream Area -->
         <ScrollView Grid.Row="1" x:Name="ChatScrollView" VerticalOptions="FillAndExpand">
-            <VerticalStackLayout x:Name="ChatStack" Spacing="16" Padding="0,10">
-                <!-- Welcome Message Gemini Style -->
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="Xin chào bạn! Mình là BACKEND AI. Mình có thể hỗ trợ gì cho bạn hôm nay?"
-                           TextColor="#F1F1F1" FontSize="16" LineHeight="1.4" />
-                </VerticalStackLayout>
+            <VerticalStackLayout x:Name="ChatStack" Spacing="14" Padding="0,8">
+                <!-- Welcome Card -->
+                <Frame BackgroundColor="#16122c" BorderColor="#3b3370" CornerRadius="16" Padding="14,12" HasShadow="False">
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="🌸 Lily AI" FontSize="12" FontAttributes="Bold" TextColor="#00f2fe" />
+                        <Label Text="Xin chào! Mình là Lily — Trợ lý ảo giọng nói AI. Chạm nút 🎤 Bấm để nói bên dưới để trò chuyện cùng mình nhé!"
+                               TextColor="#f0eefc" FontSize="14" LineHeight="1.4" />
+                    </VerticalStackLayout>
+                </Frame>
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Gemini Disclaimer Footer -->
-        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="BACKEND AI là một trợ lý ảo AI và có thể mắc sai sót."
-               FontSize="11" TextColor="#8E918F" HorizontalOptions="Center" Margin="0,4,0,8" />
+        <!-- Subtitle & Live Status -->
+        <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="✨ Sẵn sàng trò chuyện cùng bạn"
+               FontSize="12" TextColor="#a09cc0" HorizontalOptions="Center" Margin="0,4,0,8" />
 
-        <!-- Floating Gemini Input Capsule Bar -->
-        <Frame Grid.Row="3" BackgroundColor="#171A20" CornerRadius="26" Padding="7,4"
-               HasShadow="False" BorderColor="Transparent" Margin="0,0,0,4">
-            <Grid ColumnDefinitions="Auto, *, Auto, Auto" ColumnSpacing="4" VerticalOptions="Center">
-                <!-- Plus Button -->
-                <Button Grid.Column="0" Text="＋" BackgroundColor="Transparent" TextColor="#AEB7C2" FontSize="22"
-                        WidthRequest="40" HeightRequest="40" Padding="0" VerticalOptions="Center" Clicked="OnPlusClicked" />
-
+        <!-- Floating Action Capsule Bar -->
+        <Frame Grid.Row="3" BackgroundColor="#141026" CornerRadius="28" Padding="6,4"
+               HasShadow="False" BorderColor="#3b3370" Margin="0,0,0,4">
+            <Grid ColumnDefinitions="*, Auto" ColumnSpacing="6" VerticalOptions="Center">
                 <!-- Main Text Entry -->
-                <Entry Grid.Column="1" x:Name="TextInput" Placeholder="Hỏi BACKEND AI..."
-                       PlaceholderColor="#8E918F" TextColor="#FFFFFF" BackgroundColor="Transparent"
+                <Entry Grid.Column="0" x:Name="TextInput" Placeholder="Gõ câu hỏi vào đây..."
+                       PlaceholderColor="#6c688a" TextColor="#FFFFFF" BackgroundColor="Transparent"
                        Keyboard="Text" ReturnType="Send" Completed="OnSendClicked"
-                       ClearButtonVisibility="WhileEditing" FontSize="15"
-                       VerticalOptions="Center" HeightRequest="44" />
+                       ClearButtonVisibility="WhileEditing" FontSize="14"
+                       VerticalOptions="Center" HeightRequest="44" Margin="10,0,0,0" />
 
-                <!-- Mic Record Button -->
-                <Button Grid.Column="2" x:Name="MicButton" Text="🎙" BackgroundColor="Transparent" TextColor="#AEB7C2"
-                        FontSize="20" WidthRequest="40" HeightRequest="40" Padding="0" VerticalOptions="Center" Clicked="OnMicButtonClicked" />
-
-                <!-- Clear text send action -->
-                <Button Grid.Column="3" x:Name="SendButton" Text="Gửi" BackgroundColor="#7C5CFC"
-                        TextColor="#FFFFFF" FontSize="13" FontAttributes="Bold"
-                        WidthRequest="54" HeightRequest="40" CornerRadius="20" Padding="0"
-                        VerticalOptions="Center" Clicked="OnSendClicked" />
+                <!-- Grand Voice / Send Button Capsule -->
+                <HorizontalStackLayout Grid.Column="1" Spacing="4" VerticalOptions="Center">
+                    <Button x:Name="MicButton" Text="🎤" BackgroundColor="#6c47ff" TextColor="#FFFFFF"
+                            FontSize="18" WidthRequest="44" HeightRequest="44" CornerRadius="22" Padding="0"
+                            VerticalOptions="Center" Clicked="OnMicButtonClicked" />
+                    <Button x:Name="SendButton" Text="➤" BackgroundColor="#00f2fe"
+                            TextColor="#080612" FontSize="14" FontAttributes="Bold"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20" Padding="0"
+                            VerticalOptions="Center" Clicked="OnSendClicked" />
+                </HorizontalStackLayout>
             </Grid>
         </Frame>
     </Grid>
