@@ -5,14 +5,14 @@ namespace Xiaozhi.Core.Models;
 public class EfuseConfig
 {
     [JsonPropertyName("mac_address")]
-    public string MacAddress { get; set; } = "cc:30:80:20:64:7c";
+    public string MacAddress { get; set; } = "38:60:77:dc:90:11";
 
     [JsonPropertyName("serial_number")]
-    public string SerialNumber { get; set; } = "SN-F396BDD6-cc308020647c";
+    public string SerialNumber { get; set; } = "SN-B18EE69C-386077dc9011";
 
     [JsonPropertyName("hmac_key")]
-    public string HmacKey { get; set; } = string.Empty;
+    public string HmacKey { get; set; } = "4a8b1dac46b2f64dfefe39ee1279ac6f6ec7f197bcbcfdf01a373d7e516a976b";
 
     [JsonPropertyName("activation_status")]
-    public bool ActivationStatus { get; set; } = false;
+    public bool ActivationStatus { get; set; } = true;
 }

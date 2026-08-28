@@ -16,7 +16,7 @@ public partial class MainPage : ContentPage
 
     private string _wsUrl = "wss://api.tenclass.net/xiaozhi/v1/";
     private string _token = "test-token";
-    private string _deviceId = "cc:30:80:20:64:7c";
+    private string _deviceId = "38:60:77:dc:90:11";
 
     private float _currentVolume = 1.0f;
     private readonly VoiceActivityDetector _vad = new();
@@ -28,8 +28,9 @@ public partial class MainPage : ContentPage
         _wsUrl = Preferences.Default.Get("lily_ws_url", _wsUrl);
         _token = Preferences.Default.Get("lily_token", _token);
         _deviceId = Preferences.Default.Get("lily_device_id", _deviceId);
+        var clientId = Preferences.Default.Get("lily_client_id", "d7377f0a-2682-4e4f-a125-e0a78c730cf8");
 
-        _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, "maui-ios-client");
+        _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
         _textStreamer = new TextToAudioStreamer();
 
         // Auto VAD Silence Detection (Matching WPF App)

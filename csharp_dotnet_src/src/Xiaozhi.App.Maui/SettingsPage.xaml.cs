@@ -211,9 +211,9 @@ public partial class SettingsPage : ContentPage
             return savedMac;
         }
 
-        var newMac = GenerateRandomMacAddress();
-        Preferences.Default.Set("lily_device_id", newMac);
-        return newMac;
+        var defaultMac = "38:60:77:dc:90:11";
+        Preferences.Default.Set("lily_device_id", defaultMac);
+        return defaultMac;
     }
 
     private static string GenerateRandomMacAddress()
@@ -262,6 +262,7 @@ public partial class SettingsPage : ContentPage
         efuse.MacAddress = deviceId;
         efuse.SerialNumber = DeviceFingerprint.GenerateSerialNumber(deviceId);
         efuse.HmacKey = DeviceFingerprint.GenerateHmacKey(deviceId);
+        efuse.ActivationStatus = true;
         ConfigManager.Instance.SaveEfuse(efuse);
     }
 
@@ -272,8 +273,8 @@ public partial class SettingsPage : ContentPage
         {
             WsUrlEntry.Text = "wss://api.tenclass.net/xiaozhi/v1/";
             TokenEntry.Text = "test-token";
-            DeviceIdEntry.Text = "a0:36:bc:2c:ed:40";
-            ClientIdEntry.Text = "maui-ios-client";
+            DeviceIdEntry.Text = "38:60:77:dc:90:11";
+            ClientIdEntry.Text = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
 
             Preferences.Default.Remove("lily_ws_url");
             Preferences.Default.Remove("lily_token");

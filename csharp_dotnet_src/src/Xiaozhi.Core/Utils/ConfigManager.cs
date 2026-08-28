@@ -76,8 +76,8 @@ public class ConfigManager
         {
             SystemOptions = new SystemOptions
             {
-                ClientId = "a927bd19-f917-4a3a-9f5a-4e453603c9b4",
-                DeviceId = "cc:30:80:20:64:7c",
+                ClientId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8",
+                DeviceId = "38:60:77:dc:90:11",
                 Network = new NetworkOptions
                 {
                     OtaVersionUrl = "https://api.tenclass.net/xiaozhi/ota/",
@@ -99,14 +99,14 @@ public class ConfigManager
 
     private EfuseConfig CreateDefaultEfuse()
     {
-        var mac = Config?.SystemOptions?.DeviceId ?? "cc:30:80:20:64:7c";
+        var mac = Config?.SystemOptions?.DeviceId ?? "38:60:77:dc:90:11";
         var serial = DeviceFingerprint.GenerateSerialNumber(mac);
         return new EfuseConfig
         {
             MacAddress = mac,
             SerialNumber = serial,
             HmacKey = DeviceFingerprint.GenerateHmacKey(mac),
-            ActivationStatus = false
+            ActivationStatus = true
         };
     }
 
