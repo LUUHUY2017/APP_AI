@@ -182,6 +182,7 @@ class LilyPWA {
     this.btnSaveSettings = document.getElementById('btn-save-settings');
     this.btnCloseSettings = document.getElementById('btn-close-settings');
     this.btnReactivate = document.getElementById('btn-reactivate');
+    this.btnResetEfuse = document.getElementById('btn-reset-efuse');
 
     // Các trường nhập liệu trong Modal Cài đặt
     this.inputWsUrl = document.getElementById('cfg-ws-url');
