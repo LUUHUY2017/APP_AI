@@ -546,3 +546,69 @@ body {
 .modal-footer { padding: 14px 20px; background: rgba(14, 10, 28, 0.6); border-top: 1px solid var(--border-glass); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .btn-modal-danger { background: rgba(255, 51, 102, 0.12); border: 1px solid rgba(255, 51, 102, 0.3); color: #ff6b81; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .btn-modal-save { background: linear-gradient(135deg, #6c5ce7, #8a2be2); border: none; color: #fff; border-radius: 10px; padding: 10px; font-size: 12px; font-weight: 800; cursor: pointer; }
+
+
+/* Explicit 2-Sided Chat Bubble Alignment */
+.chat-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  width: 100% !important;
+}
+
+.chat-bubble {
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+/* User Message: RIGHT ALIGNED */
+.chat-bubble.user {
+  align-self: flex-end !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  max-width: 80% !important;
+  background: linear-gradient(135deg, #6c47ff 0%, #8a2be2 100%) !important;
+  color: #ffffff !important;
+  padding: 10px 16px !important;
+  border-radius: 18px 18px 4px 18px !important;
+  box-shadow: 0 4px 16px rgba(108, 71, 255, 0.45) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  text-align: left !important;
+  word-break: break-word !important;
+}
+
+/* AI Message: LEFT ALIGNED */
+.chat-bubble.ai {
+  align-self: flex-start !important;
+  margin-right: auto !important;
+  margin-left: 0 !important;
+  max-width: 86% !important;
+  background: rgba(22, 18, 44, 0.88) !important;
+  border: 1px solid rgba(138, 43, 226, 0.35) !important;
+  color: #f5f4fc !important;
+  padding: 12px 16px !important;
+  border-radius: 18px 18px 18px 4px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45) !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  word-break: break-word !important;
+}
+
+.bubble-header {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 6px !important;
+}
+
+.bubble-author {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #00f2fe !important;
+}
+
+.bubble-text {
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+}

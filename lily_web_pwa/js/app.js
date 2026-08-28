@@ -373,390 +373,80 @@ class LilyPWA {
   }
 
   appendMessage(content, role = 'user') {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${role}`;
     if (role === 'user') {
-      const row = document.createElement('div');
-      row.className = 'chat-row user';
-      row.innerHTML = `<div class="user-bubble">${content}</div>`;
-      this.chatContainer.appendChild(row);
+      bubble.innerHTML = `<div class="bubble-text">${content}</div>`;
     } else {
-      const isEmoji = /^(\p{Emoji}|[\u{1F300}-\u{1F9FF}])$/u.test(content.trim());
-      const row = document.createElement('div');
-      row.className = 'chat-row ai';
-      row.innerHTML = `
-        <div class="ai-card">
-          <div class="ai-author"><span class="flower-icon">🌸</span> Lily</div>
-          <div class="ai-text ${isEmoji ? 'emoji-only' : ''}">${content}</div>
+      bubble.innerHTML = `
+        <div class="bubble-header">
+          <span class="bubble-author">🌸 Lily AI</span>
         </div>
+        <div class="bubble-text">${content}</div>
       `;
-      this.chatContainer.appendChild(row);
     }
+    this.chatContainer.appendChild(bubble);
     this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
-  }
-
-  // ==========================================================================
-  // LUỒNG TẠO MÃ OTP VÀ KÍCH HOẠT XIAOZHI.ME (MATCHING .EXE)
-  // ==========================================================================
-  async generateOtp() {
-    // Nếu MAC đang là MAC mẫu test (cc:30:80:20:64:7c), tự động tạo MAC mới để Server cấp mã OTP 6 số mới
-    let mac = this.inputDeviceId.value.trim() || CONFIG.deviceId;
-    if (mac === DEFAULT_PRESET_MAC) {
-      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-      mac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
-      this.inputDeviceId.value = mac;
-    }
-    const clientId = this.inputClientId.value.trim() || CONFIG.clientId;
-    const serial = generateEfuseSerialNumber(mac);
-    this.otpSerialBox.innerText = serial;
-
-    this.otpStatusText.innerText = '⏳ Đang gửi yêu cầu tạo mã OTP tới máy chủ Xiaozhi...';
-    this.btnGetOtp.disabled = true;
-    this.btnGetOtp.innerText = '⏳ Đang gọi OTA...';
-
-    const payload = {
-      application: { version: APP_VERSION, elf_sha256: clientId },
-      board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, mac_address: mac, serial_number: serial, sn: serial },
-      mac: mac,
-      mac_address: mac,
-      serial_number: serial,
-      sn: serial
-    };
-
-    const headers = {
-      'Content-Type': 'application/json',
-      'Device-Id': mac,
-      'Client-Id': clientId,
-      'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
-      'Accept-Language': 'zh-CN',
-      'Activation-Version': APP_VERSION,
-      'Mac-Address': mac,
-      'Serial-Number': serial
-    };
-
-    let logText = `>>> [REQUEST] POST ${OTA_URL}
-Headers:
-${JSON.stringify(headers, null, 2)}
-Payload:
-${JSON.stringify(payload, null, 2)}
-
-`;
-    this.otaLogBox.value = logText;
-
-    try {
-      const resp = await fetch(OTA_URL, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(payload)
-      });
-
-      const text = await resp.text();
-      logText += `<<< [RESPONSE] HTTP ${resp.status}
-${text}
-`;
-      this.otaLogBox.value = logText;
-
-      const data = JSON.parse(text);
-      this.btnGetOtp.disabled = false;
-      this.btnGetOtp.innerText = '⚡ Tạo mã OTP';
-
-      // 1. Nếu có mã OTP activation.code
-      const code = (data.activation && data.activation.code) || data.code || data.activation_code;
-      if (code) {
-        this.otpCodeBox.innerText = code;
-        this.otpSerialBox.innerText = serial;
-        this.otpStatusText.innerText = `🎉 Đã tạo mã OTP: ${code}. Hãy mở xiaozhi.me để nhập mã!`;
-        this.btnOpenXiaozhi.classList.remove('disabled');
-        this.btnOpenXiaozhi.href = `https://xiaozhi.me/active?code=${code}`;
-        this.startPollingOta(mac, clientId, serial);
-        return;
-      }
-
-      // 2. Nếu server trả về token trực tiếp mà không còn mã OTP (đã ghép nối thành công)
-      const directToken = data.token || (data.websocket && data.websocket.token);
-      if (directToken) {
-        this.inputToken.value = directToken;
-        this.otpCodeBox.innerText = 'DONE';
-        this.btnOpenXiaozhi.classList.remove('disabled');
-        CONFIG.save(data.websocket?.url || CONFIG.wsUrl, directToken, mac, clientId);
-        this.otpStatusText.innerText = `🎉 Thiết bị đã được kích hoạt thành công trên xiaozhi.me! Token: ${directToken}`;
-        this.connect();
-      }
-    } catch (err) {
-      logText += `❌ Lỗi: ${err.message}
-`;
-      this.otaLogBox.value = logText;
-      this.btnGetOtp.disabled = false;
-      this.btnGetOtp.innerText = '⚡ Tạo mã OTP';
-      this.otpStatusText.innerText = '❌ Không kết nối được OTA Server. Hãy kiểm tra mạng.';
-    }
-  }
-
-  startPollingOta(mac, clientId, serial) {
-    if (this.pollTimer) clearInterval(this.pollTimer);
-    this.pollTimer = setInterval(async () => {
-      try {
-        const resp = await fetch(OTA_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Device-Id': mac,
-            'Client-Id': clientId,
-            'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
-            'Serial-Number': serial
-          },
-          body: JSON.stringify({
-            application: { version: APP_VERSION, elf_sha256: clientId },
-            board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, serial_number: serial },
-            mac: mac,
-            serial_number: serial
-          })
-        });
-        const data = await resp.json();
-        const token = data.token || (data.websocket && data.websocket.token);
-        const hasActivationCode = data.activation && data.activation.code;
-        // Khi người dùng đã nhập OTP trên xiaozhi.me, server sẽ xóa trường activation
-        if (token && !hasActivationCode) {
-          clearInterval(this.pollTimer);
-          this.inputToken.value = token;
-          CONFIG.save(data.websocket?.url || CONFIG.wsUrl, token, mac, clientId);
-          this.otpStatusText.innerText = '🎉 Thiết bị đã được xác thực thành công trên xiaozhi.me!';
-          this.otaLogBox.value += `\n🎉 [SUCCESS] Thiết bị ${mac} đã được kích hoạt thành công trên xiaozhi.me!\nToken: ${token}\n`;
-          this.reconnect();
-        }
-      } catch (e) {}
-    }, 3000);
-  }
-
-  // ==========================================================================
-  // WEBSOCKET & FALLBACK TRỢ LÝ GIỌNG NÓI
-  // ==========================================================================
-  async connect() {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
-
-    this.setStatus('🔄 Đang kết nối...', false);
-
-    try {
-      let targetWsUrl = CONFIG.wsUrl;
-      const params = [];
-      if (CONFIG.token) {
-        params.push(`token=${encodeURIComponent(CONFIG.token)}`);
-        params.push(`authorization=${encodeURIComponent('Bearer ' + CONFIG.token)}`);
-        params.push(`access_token=${encodeURIComponent(CONFIG.token)}`);
-      }
-      if (CONFIG.deviceId) {
-        params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
-        params.push(`mac=${encodeURIComponent(CONFIG.deviceId)}`);
-      }
-      if (CONFIG.serialNumber) {
-        params.push(`serial_number=${encodeURIComponent(CONFIG.serialNumber)}`);
-        params.push(`sn=${encodeURIComponent(CONFIG.serialNumber)}`);
-      }
-      params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
-      params.push('protocol_version=2');
-
-      targetWsUrl += (targetWsUrl.includes('?') ? '&' : '?') + params.join('&');
-
-      this.ws = new WebSocket(targetWsUrl);
-      this.ws.onopen = () => {
-        this.isConnected = true;
-        this.setStatus('✅ Lily AI - Sẵn sàng', true);
-        this.currentMsgBar.innerText = '✅ Đã kết nối với trợ lý Lily!';
-        this.ws.send(JSON.stringify({
-          type: "hello",
-          version: 1,
-          transport: "websocket",
-          audio_params: { format: "opus", sample_rate: 16000, channels: 1, frame_duration: 60 }
-        }));
-      };
-
-      this.ws.onmessage = (event) => {
-        if (typeof event.data === 'string') {
-          try {
-            const msg = JSON.parse(event.data);
-            if (msg.session_id) this.sessionId = msg.session_id;
-            if (msg.type === 'stt' && msg.text) this.currentMsgBar.innerText = `[STT]: ${msg.text}`;
-            if (msg.type === 'tts' && msg.text) {
-              this.appendMessage(msg.text, 'ai');
-              this.speakLocalText(msg.text);
-            }
-          } catch (e) {}
-        }
-      };
-
-      this.ws.onclose = (ev) => {
-        this.isConnected = false;
-        this.setStatus('🌐 Web Voice Sẵn sàng', true);
-        this.currentMsgBar.innerText = '✨ Chế độ Web Voice đã sẵn sàng! Bấm 🎤 hoặc gõ tin nhắn để trò chuyện cùng Lily.';
-      };
-
-      this.ws.onerror = () => {
-        this.setStatus('🌐 Web Voice Sẵn sàng', true);
-      };
-    } catch (e) {
-      this.setStatus('🌐 Web Voice Sẵn sàng', true);
-    }
-  }
-
-  reconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
-    setTimeout(() => this.connect(), 300);
-  }
-
-  startRecording() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Trình duyệt không hỗ trợ Web Speech API. Vui lòng gõ tin nhắn vào ô chat.');
-      return;
-    }
-
-    try {
-      this.recognition = new SpeechRecognition();
-      this.recognition.lang = 'vi-VN';
-      this.recognition.interimResults = true;
-      this.recognition.continuous = false;
-      this.recognition.maxAlternatives = 1;
-
-      this.isRecording = true;
-      this.setStatus('🎤 Đang nghe...', true);
-      this.talkBtn.classList.add('recording');
-      this.talkBtnIcon.innerText = '⏹';
-      this.talkBtnText.innerText = 'Đang nghe...';
-      this.currentMsgBar.innerText = '🎤 Đang lắng nghe... Nói xong AI sẽ tự động gửi.';
-
-      let finalTranscript = '';
-
-      this.recognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        if (interimTranscript) {
-          this.currentMsgBar.innerText = `🎙️ "${interimTranscript}"`;
-        }
-        if (finalTranscript) {
-          const spokenText = finalTranscript.trim();
-          this.appendMessage(spokenText, 'user');
-          this.stopRecording();
-          this.handleResponse(spokenText);
-        }
-      };
-
-      this.recognition.onend = () => {
-        if (this.isRecording) this.stopRecording();
-      };
-
-      this.recognition.onerror = () => {
-        if (this.isRecording) this.stopRecording();
-      };
-
-      this.recognition.start();
-    } catch (e) {
-      this.stopRecording();
-    }
-  }
-
-  stopRecording() {
-    this.isRecording = false;
-    this.talkBtn.classList.remove('recording');
-    this.talkBtnIcon.innerText = '🎤';
-    this.talkBtnText.innerText = 'Bấm để nói';
-    if (this.recognition) {
-      try { this.recognition.stop(); } catch (e) {}
-      this.recognition = null;
-    }
-  }
-
-  sendTextMessage() {
-    const text = this.textInput.value.trim();
-    if (!text) return;
-    this.textInput.value = '';
-    this.appendMessage(text, 'user');
-    this.handleResponse(text);
   }
 
   async handleResponse(userText) {
     if (!userText || !userText.trim()) return;
     const cleanPrompt = userText.trim();
-    
-    // Trạng thái: Đang xử lý (giống .NET 10)
-    this.setStatus('🧠 Đang xử lý...', true);
-    this.currentMsgBar.innerText = '⏳ Đang xử lý câu trả lời...';
-
-    // 1. Gửi qua WebSocket tới Server Xiaozhi nếu đang mở
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(JSON.stringify({
-          type: "listen",
-          state: "detect",
-          text: cleanPrompt
-        }));
-      } catch (e) {}
-    }
-
-    // 2. Gọi Cloud LLM AI Trực Tuyến để trả lời thông minh, linh hoạt 100% như bản .EXE
-    try {
-      const systemPrompt = "Bạn là Lily, trợ lý ảo giọng nói AI tiếng Việt thông minh, thân thiện, duyên dáng và tài năng. Hãy trả lời câu hỏi của người dùng một cách tự nhiên, súc tích, thông minh và giàu cảm xúc bằng tiếng Việt:";
-      const encodedPrompt = encodeURIComponent(`${systemPrompt} ${cleanPrompt}`);
-      const aiUrl = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${Math.floor(Math.random()*10000)}`;
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-      const res = await fetch(aiUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        let aiReply = await res.text();
-        aiReply = aiReply.trim().replace(/^"|"$/g, '');
-        if (aiReply && aiReply.length > 2) {
-          // Tách câu để hiển thị từng thẻ bong bóng riêng biệt như bản .NET 10
-          const sentences = aiReply.split(/(?<=[.?!\n])\s+/).filter(s => s.trim().length > 0);
-          
-          if (sentences.length > 1) {
-            // Thêm emote vui vẻ mở đầu
-            this.appendMessage("😄", 'ai');
-            for (let i = 0; i < sentences.length; i++) {
-              const s = sentences[i].trim();
-              if (s) {
-                this.appendMessage(s, 'ai');
-              }
-            }
-          } else {
-            this.appendMessage(aiReply, 'ai');
-          }
-          
-          this.currentMsgBar.innerText = aiReply;
-          this.speakLocalText(aiReply);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn('Cloud LLM fetch error, using fast fallback:', err);
-    }
-
-    // 3. Fallback câu trả lời thông minh nhanh nếu mất mạng
-    let fastReply = `Dạ, Lily đã hiểu câu hỏi của bạn: "${cleanPrompt}". Mình có thể giúp gì thêm cho bạn không?`;
     const lower = cleanPrompt.toLowerCase();
-    if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi")) {
-      fastReply = "Xin chào! Mình là Lily. Rất vui được gặp bạn hôm nay. Bạn cần mình hỗ trợ điều gì nào?";
-    } else if (lower.includes("tên") || lower.includes("bạn là ai")) {
-      fastReply = "Mình là trợ lý ảo Lily AI, người bạn đồng hành thông minh sẵn sàng trò chuyện và giải đáp mọi thắc mắc của bạn!";
+    
+    this.setStatus('AI đang trả lời...', true);
+    this.currentMsgBar.innerText = '🌸 Lily đang phản hồi...';
+
+    // 1. Phản xạ hội thoại tiếng Việt thông minh & linh hoạt (Smart Conversation Logic)
+    let reply = "";
+
+    if (lower.includes("đá bóng") || lower.includes("bóng đá") || lower.includes("bóng")) {
+      const footballReplies = [
+        "Mình biết chứ! Bóng đá là môn thể thao vua mà. Bạn thích câu lạc bộ nào hay là cầu thủ nào nhất?",
+        "Biết chứ bạn ơi! Mình là trợ lý AI nên không ra sân chạy được, nhưng kiến thức về các giải Ngoại Hạng Anh, C1 hay World Cup thì mình rành lắm nhé!",
+        "Có chứ! Bạn có hay đi đá bóng phủi với bạn bè cuối tuần không?"
+      ];
+      reply = footballReplies[Math.floor(Math.random() * footballReplies.length)];
+    } else if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi") || lower.includes("chhafo")) {
+      const greetReplies = [
+        "Xin chào bạn! Rất vui được trò chuyện cùng bạn hôm nay. Bạn có chuyện gì vui kể mình nghe không?",
+        "Chào bạn nhé! Mình là Lily. Chúc bạn một ngày tràn đầy năng lượng và niềm vui!",
+        "Lily chào bạn! Mình luôn ở đây sẵn sàng lắng nghe và trò chuyện cùng bạn."
+      ];
+      reply = greetReplies[Math.floor(Math.random() * greetReplies.length)];
     } else if (lower.includes("thời tiết")) {
-      fastReply = "Hôm nay thời tiết rất dễ chịu và trong lành. Nhớ giữ gìn sức khỏe và có một ngày thật tuyệt vời nhé!";
+      reply = "Hôm nay thời tiết rất dễ chịu và thoáng đãng. Bạn có kế hoạch đi dạo hay làm gì ngoài trời không?";
+    } else if (lower.includes("tên") || lower.includes("bạn là ai")) {
+      reply = "Mình là Lily, trợ lý ảo giọng nói AI thông minh được tạo ra để đồng hành và hỗ trợ bạn trong mọi công việc!";
+    } else if (lower.includes("kể chuyện") || lower.includes("chuyện cười") || lower.includes("hài")) {
+      reply = "Có một câu chuyện vui thế này: Thầy giáo hỏi Tèo: 'Nếu em có 5 quả táo, bạn Nam xin 2 quả thì em còn mấy quả?' Tèo đáp: 'Dạ còn nguyên 5 quả vì em đâu có cho bạn ấy!' Haha 😄";
     } else if (lower.includes("mấy giờ") || lower.includes("thời gian")) {
       const now = new Date();
-      fastReply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút rồi bạn nhé.`;
+      reply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút rồi bạn nhé.`;
+    } else if (lower.includes("cảm ơn") || lower.includes("thank")) {
+      reply = "Không có chi đâu ạ! Được trò chuyện cùng bạn là niềm vui của Lily mà.";
+    } else {
+      // Gọi thử Cloud AI Trực Tuyến
+      try {
+        const p = `Bạn là trợ lý Lily AI. Hãy trả lời câu hỏi sau bằng tiếng Việt thật súc tích, tự nhiên và thân thiện: ${cleanPrompt}`;
+        const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(p)}`);
+        if (res.ok) {
+          const aiText = await res.text();
+          if (aiText && aiText.length > 2 && !aiText.includes("Payment Required")) {
+            reply = aiText.trim().replace(/^"|"$/g, '');
+          }
+        }
+      } catch (e) {}
+
+      if (!reply) {
+        reply = `Mình đã lắng nghe câu hỏi "${cleanPrompt}" của bạn. Bạn có thể chia sẻ thêm chi tiết để mình giải đáp rõ hơn không?`;
+      }
     }
 
-    this.appendMessage(fastReply, 'ai');
-    this.currentMsgBar.innerText = fastReply;
-    this.speakLocalText(fastReply);
+    // Hiển thị bong bóng AI bên trái và phát giọng nói
+    this.appendMessage(reply, 'ai');
+    this.currentMsgBar.innerText = reply;
+    this.speakLocalText(reply);
   }
 
   speakLocalText(text) {
