@@ -461,12 +461,15 @@ ${text}
         return;
       }
 
-      // 2. Nếu server trả về token trực tiếp mà không có mã OTP
+      // 2. Nếu server trả về token trực tiếp mà không còn mã OTP (đã ghép nối thành công)
       const directToken = data.token || (data.websocket && data.websocket.token);
       if (directToken) {
         this.inputToken.value = directToken;
-        CONFIG.save(CONFIG.wsUrl, directToken, mac, clientId);
-        this.otpStatusText.innerText = `✅ Thiết bị đã có Token hợp lệ (${directToken})!`;
+        this.otpCodeBox.innerText = 'DONE';
+        this.btnOpenXiaozhi.classList.remove('disabled');
+        CONFIG.save(data.websocket?.url || CONFIG.wsUrl, directToken, mac, clientId);
+        this.otpStatusText.innerText = `🎉 Thiết bị đã được kích hoạt thành công trên xiaozhi.me! Token: ${directToken}`;
+        this.connect();
       }
     } catch (err) {
       logText += `❌ Lỗi: ${err.message}
@@ -500,12 +503,14 @@ ${text}
         });
         const data = await resp.json();
         const token = data.token || (data.websocket && data.websocket.token);
-        if (token && token !== 'test-token' && !data.activation) {
+        const hasActivationCode = data.activation && data.activation.code;
+        // Khi người dùng đã nhập OTP trên xiaozhi.me, server sẽ xóa trường activation
+        if (token && !hasActivationCode) {
           clearInterval(this.pollTimer);
           this.inputToken.value = token;
           CONFIG.save(data.websocket?.url || CONFIG.wsUrl, token, mac, clientId);
-          this.otpStatusText.innerText = '🎉 Kích hoạt thành công trên xiaozhi.me! Token đã được nạp.';
-          alert('🎉 Chúc mừng! Thiết bị đã được kích hoạt thành công trên Xiaozhi.me!');
+          this.otpStatusText.innerText = '🎉 Thiết bị đã được xác thực thành công trên xiaozhi.me!';
+          this.otaLogBox.value += `\n🎉 [SUCCESS] Thiết bị ${mac} đã được kích hoạt thành công trên xiaozhi.me!\nToken: ${token}\n`;
           this.reconnect();
         }
       } catch (e) {}
