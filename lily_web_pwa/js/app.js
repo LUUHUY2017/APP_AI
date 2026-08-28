@@ -672,41 +672,66 @@ ${text}
     this.handleResponse(text);
   }
 
-  handleResponse(userText) {
+  async handleResponse(userText) {
     if (!userText || !userText.trim()) return;
+    const cleanPrompt = userText.trim();
     this.setSpeaking(true);
+    this.currentMsgBar.innerText = '🌸 Lily đang suy nghĩ câu trả lời...';
 
-    // Gửi trực tiếp qua WebSocket tới Server Xiaozhi nếu kết nối đang mở
+    // 1. Gửi qua WebSocket tới Server Xiaozhi nếu đang mở
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({
           type: "listen",
           state: "detect",
-          text: userText
+          text: cleanPrompt
         }));
       } catch (e) {}
     }
 
-    // Xử lý phản hồi AI siêu tốc (0ms delay)
-    let reply = `Dạ, Lily nghe rõ: "${userText}". Mình luôn sẵn sàng hỗ trợ bạn!`;
-    const lower = userText.toLowerCase();
-    if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi")) {
-      reply = "Xin chào! Mình là Lily, rất vui được trò chuyện cùng bạn. Hôm nay mình có thể giúp gì cho bạn?";
-    } else if (lower.includes("tên") || lower.includes("bạn là ai") || lower.includes("ai đó")) {
-      reply = "Mình là trợ lý ảo Lily AI, phát triển để đồng hành và hỗ trợ bạn trong công việc và cuộc sống!";
-    } else if (lower.includes("thời tiết")) {
-      reply = "Hôm nay thời tiết rất đẹp và dễ chịu. Chúc bạn một ngày làm việc thật nhiều niềm vui và hiệu quả nhé!";
-    } else if (lower.includes("mấy giờ") || lower.includes("thời gian")) {
-      const now = new Date();
-      reply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút.`;
-    } else if (lower.includes("cảm ơn") || lower.includes("thank")) {
-      reply = "Không có chi đâu ạ! Bất cứ khi nào bạn cần, Lily luôn ở đây nhé.";
+    // 2. Gọi Cloud LLM AI Trực Tuyến để trả lời thông minh, linh hoạt 100% như bản .EXE
+    try {
+      const systemPrompt = "Bạn là Lily, trợ lý ảo giọng nói AI tiếng Việt thông minh, thân thiện, duyên dáng và tài năng. Hãy trả lời câu hỏi của người dùng một cách tự nhiên, súc tích, thông minh và giàu cảm xúc bằng tiếng Việt:";
+      const encodedPrompt = encodeURIComponent(`${systemPrompt} ${cleanPrompt}`);
+      const aiUrl = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${Math.floor(Math.random()*10000)}`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch(aiUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        let aiReply = await res.text();
+        aiReply = aiReply.trim().replace(/^"|"$/g, '');
+        if (aiReply && aiReply.length > 2) {
+          this.appendMessage(aiReply, 'ai');
+          this.currentMsgBar.innerText = aiReply;
+          this.speakLocalText(aiReply);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Cloud LLM fetch error, using fast fallback:', err);
     }
 
-    // Phản hồi tức thì không độ trễ
-    this.appendMessage(reply, 'ai');
-    this.currentMsgBar.innerText = reply;
-    this.speakLocalText(reply);
+    // 3. Fallback câu trả lời thông minh nhanh nếu mất mạng
+    let fastReply = `Dạ, Lily đã hiểu câu hỏi của bạn: "${cleanPrompt}". Mình có thể giúp gì thêm cho bạn không?`;
+    const lower = cleanPrompt.toLowerCase();
+    if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi")) {
+      fastReply = "Xin chào! Mình là Lily. Rất vui được gặp bạn hôm nay. Bạn cần mình hỗ trợ điều gì nào?";
+    } else if (lower.includes("tên") || lower.includes("bạn là ai")) {
+      fastReply = "Mình là trợ lý ảo Lily AI, người bạn đồng hành thông minh sẵn sàng trò chuyện và giải đáp mọi thắc mắc của bạn!";
+    } else if (lower.includes("thời tiết")) {
+      fastReply = "Hôm nay thời tiết rất dễ chịu và trong lành. Nhớ giữ gìn sức khỏe và có một ngày thật tuyệt vời nhé!";
+    } else if (lower.includes("mấy giờ") || lower.includes("thời gian")) {
+      const now = new Date();
+      fastReply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút rồi bạn nhé.`;
+    }
+
+    this.appendMessage(fastReply, 'ai');
+    this.currentMsgBar.innerText = fastReply;
+    this.speakLocalText(fastReply);
   }
 
   speakLocalText(text) {
