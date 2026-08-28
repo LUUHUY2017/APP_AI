@@ -9,7 +9,7 @@
  */
 
 // Tên Cache phiên bản hiện tại (Mỗi khi thay đổi lớn có thể tăng v3, v4...)
-const CACHE_NAME = 'lily-pwa-v3';
+const CACHE_NAME = 'lily-pwa-v4';
 
 // Danh sách các file cốt lõi cần nạp vào bộ nhớ đệm
 const ASSETS = [
