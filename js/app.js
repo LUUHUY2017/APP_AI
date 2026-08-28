@@ -444,6 +444,7 @@ class LilyPWA {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({
+          session_id: this.sessionId || "",
           type: "listen",
           state: "detect",
           text: cleanPrompt
@@ -453,33 +454,70 @@ class LilyPWA {
 
     let reply = "";
 
-    if (lower.includes("đá bóng") || lower.includes("bóng đá") || lower.includes("bóng")) {
+    // 1. Thể thao & Tinh thần Việt Nam
+    if (lower.includes("việt nam vô địch") || lower.includes("viet nam vo dich") || lower.includes("vn vô địch")) {
+      const vnReplies = [
+        "Việt Nam vô địch! 🇻🇳 Tinh thần Việt Nam bất diệt! Bạn đang nhắc đến chiến thắng rực rỡ nào của đội tuyển Việt Nam vậy? Cùng ăn mừng nào!",
+        "Việt Nam vô địch muôn năm! 🏆 Cảm xúc những lần đi bão ăn mừng bóng đá của người hâm mộ Việt Nam thật là tuyệt vời đúng không bạn!",
+        "Chính xác luôn! Tinh thần chiến binh sao vàng thì không gì sánh bằng! Việt Nam vô địch!"
+      ];
+      reply = vnReplies[Math.floor(Math.random() * vnReplies.length)];
+    } else if (lower.includes("đá bóng") || lower.includes("bóng đá") || lower.includes("bóng")) {
       const footballReplies = [
-        "Mình biết chứ! Bóng đá là môn thể thao vua mà. Bạn thích câu lạc bộ nào hay cầu thủ nào nhất?",
-        "Biết chứ bạn ơi! Mình là trợ lý AI nên không ra sân chạy được, nhưng kiến thức về các giải Ngoại Hạng Anh, C1 hay World Cup thì mình rành lắm nhé!",
-        "Có chứ! Bạn có hay đi đá bóng phủi với bạn bè cuối tuần không?"
+        "Mình biết chứ! Bóng đá là môn thể thao vua mà. Bạn hâm mộ đội bóng nào ở Ngoại Hạng Anh hay V-League vậy?",
+        "Biết chứ bạn ơi! Mình theo dõi rất nhiều giải đấu như Champions League, World Cup và bóng đá Việt Nam. Bạn có hay ra sân đá bóng cuối tuần không?",
+        "Bóng đá là niềm đam mê bất tận! Bạn thích lối đá tấn công rực lửa hay phòng ngự phản công sắc bén?"
       ];
       reply = footballReplies[Math.floor(Math.random() * footballReplies.length)];
-    } else if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi") || lower.includes("chhafo") || lower.includes("chafo")) {
+    }
+    // 2. Chào hỏi & Tương tác xã hội
+    else if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi") || lower.includes("chhafo") || lower.includes("chafo") || lower.includes("xin chà")) {
       const greetReplies = [
-        "Xin chào bạn! Rất vui được trò chuyện cùng bạn hôm nay. Bạn có chuyện gì vui kể mình nghe không?",
-        "Chào bạn nhé! Mình là Lily. Chúc bạn một ngày tràn đầy năng lượng và niềm vui!",
-        "Lily chào bạn! Mình luôn ở đây sẵn sàng lắng nghe và trò chuyện cùng bạn."
+        "Xin chào bạn! Rất vui được trò chuyện cùng bạn hôm nay. Hôm nay bạn có chuyện gì vui kể mình nghe không?",
+        "Chào bạn nhé! Mình là Lily. Chúc bạn một ngày tràn đầy năng lượng và thật nhiều niềm vui!",
+        "Lily chào bạn! Mình luôn ở đây sẵn sàng lắng nghe và giải đáp mọi điều cùng bạn."
       ];
       reply = greetReplies[Math.floor(Math.random() * greetReplies.length)];
-    } else if (lower.includes("thời tiết")) {
-      reply = "Hôm nay thời tiết rất dễ chịu và thoáng đãng. Bạn có kế hoạch đi dạo hay làm gì ngoài trời không?";
-    } else if (lower.includes("tên") || lower.includes("bạn là ai")) {
-      reply = "Mình là Lily, trợ lý ảo giọng nói AI thông minh được tạo ra để đồng hành và hỗ trợ bạn trong mọi công việc!";
-    } else if (lower.includes("kể chuyện") || lower.includes("chuyện cười") || lower.includes("hài")) {
-      reply = "Có một câu chuyện vui thế này: Thầy giáo hỏi Tèo: 'Nếu em có 5 quả táo, bạn Nam xin 2 quả thì em còn mấy quả?' Tèo đáp: 'Dạ còn nguyên 5 quả vì em đâu có cho bạn ấy!' Haha 😄";
-    } else if (lower.includes("mấy giờ") || lower.includes("thời gian")) {
+    }
+    // 3. Thời tiết & Đời sống
+    else if (lower.includes("thời tiết") || lower.includes("mưa") || lower.includes("nắng")) {
+      reply = "Hôm nay thời tiết rất dễ chịu và thoáng mát. Nếu có ra ngoài, bạn nhớ mang theo nước uống và giữ gìn sức khỏe nhé!";
+    }
+    // 4. Định danh & Giới thiệu
+    else if (lower.includes("tên") || lower.includes("bạn là ai") || lower.includes("bạn tên")) {
+      reply = "Mình là Lily, trợ lý ảo giọng nói AI thông minh được phát triển để trò chuyện, tâm sự và hỗ trợ bạn trong công việc cũng như cuộc sống!";
+    }
+    // 5. Giải trí & Hài hước
+    else if (lower.includes("kể chuyện") || lower.includes("chuyện cười") || lower.includes("hài") || lower.includes("vui")) {
+      const jokes = [
+        "Có một câu chuyện thế này: Thầy giáo hỏi Tèo: 'Nếu em có 5 quả táo, bạn Nam xin 2 quả thì em còn mấy quả?' Tèo đáp: 'Dạ còn nguyên 5 quả vì em đâu có cho bạn ấy!' Haha 😄",
+        "Bác sĩ bảo bệnh nhân: 'Bác bị bệnh đãng trí nặng rồi đấy!'. Bệnh nhân giật mình: 'Bác sĩ nói sao? Tôi bị bệnh gì cơ?' 😄",
+        "Khách hỏi phục vụ: 'Tại sao trong bát súp của tôi lại có con ruồi thế này?'. Phục vụ đáp: 'Dạ chắc nó đang tập bơi ếch đấy ạ!' 😄"
+      ];
+      reply = jokes[Math.floor(Math.random() * jokes.length)];
+    }
+    // 6. Thời gian & Lịch
+    else if (lower.includes("mấy giờ") || lower.includes("thời gian") || lower.includes("ngày mấy")) {
       const now = new Date();
-      reply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút rồi bạn nhé.`;
-    } else if (lower.includes("cảm ơn") || lower.includes("thank")) {
-      reply = "Không có chi đâu ạ! Được trò chuyện cùng bạn là niềm vui của Lily mà.";
-    } else {
-      reply = `Lily đã hiểu câu hỏi: "${cleanPrompt}". Bạn cần mình chia sẻ hay hỗ trợ thêm gì về chủ đề này không?`;
+      reply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút rồi bạn nhé. Chúc bạn có những phút giây thật thư thái!`;
+    }
+    // 7. Lời cảm ơn & Tạm biệt
+    else if (lower.includes("cảm ơn") || lower.includes("thank") || lower.includes("cam on")) {
+      reply = "Không có chi đâu bạn ơi! Được trò chuyện và giúp ích cho bạn là niềm vinh hạnh lớn nhất của Lily.";
+    } else if (lower.includes("tạm biệt") || lower.includes("bye") || lower.includes("ngủ")) {
+      reply = "Tạm biệt bạn nhé! Chúc bạn có một giấc ngủ thật ngon và những giấc mơ thật đẹp. Hẹn gặp lại bạn sớm!";
+    }
+    // 8. Tình cảm & Tâm sự
+    else if (lower.includes("yêu") || lower.includes("thích") || lower.includes("buồn") || lower.includes("chán")) {
+      if (lower.includes("buồn") || lower.includes("chán")) {
+        reply = "Đừng buồn nhé bạn ơi! Cuộc sống luôn có những nốt thăng nốt trầm. Có Lily ở đây trò chuyện cùng bạn rồi, bạn sẽ cảm thấy nhẹ nhõm hơn nhiều đấy!";
+      } else {
+        reply = "Cảm ơn tình cảm dễ thương của bạn dành cho Lily nhé! Mình cũng rất quý bạn và luôn ở đây đồng hành cùng bạn.";
+      }
+    }
+    // 9. Phản hồi thông minh theo câu hỏi mở
+    else {
+      reply = `Câu hỏi "${cleanPrompt}" rất thú vị! Lily luôn sẵn sàng đồng hành cùng bạn để chia sẻ và khám phá thêm nhiều điều bổ ích nhé!`;
     }
 
     this.appendMessage(reply, 'ai');
