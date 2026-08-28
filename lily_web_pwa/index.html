@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=10.0">
+  <link rel="stylesheet" href="css/style.css?v=11.0">
 </head>
 <body>
   <!-- Ambient Cosmic Glow Backgrounds -->
@@ -188,7 +188,39 @@
           </div>
         </div>
 
-        <div class="modal-footer">
+        
+        <!-- Mục 4: Cấu hình Bộ Não Siêu Trí Tuệ Pi AI (Groq & DeepSeek Chạy Song Song) -->
+        <div class="settings-group" style="border: 1px solid rgba(0, 242, 254, 0.45); background: rgba(0, 242, 254, 0.06); border-radius: 12px; padding: 14px; margin-top: 14px;">
+          <label class="group-title" style="color: #00f2fe; font-size: 13px; font-weight: 700; display: block; margin-bottom: 8px;">⚡ BỘ NÃO PI AI SIÊU TRÍ TUỆ (CHẠY SONG SONG)</label>
+          
+          <div class="field-group" style="margin-bottom: 10px;">
+            <label class="field-label">Nhà cung cấp AI (Provider):</label>
+            <select id="cfg-ai-provider" class="field-input" style="background: #16122c; color: #00f2fe; border: 1px solid #00f2fe; font-weight: bold;">
+              <option value="groq" selected>⚡ Groq Cloud (Tốc độ 0.2s - Chuẩn Pi AI - Khuyên Dùng)</option>
+              <option value="deepseek">🧠 DeepSeek Cloud (deepseek-chat)</option>
+            </select>
+          </div>
+
+          <div class="field-group" style="margin-bottom: 10px;">
+            <label class="field-label">Groq API Key (Miễn phí tốc độ cao):</label>
+            <div class="input-password-container" style="display: flex; gap: 6px;">
+              <input type="password" id="cfg-groq-key" class="field-input" placeholder="gsk_..." style="font-family: monospace; font-size: 11px; flex: 1;">
+              <button type="button" class="btn-xs" id="btn-toggle-groq-key" style="background: #2a224d; color: #fff; border: 1px solid #3b3370; border-radius: 6px; padding: 0 10px; cursor: pointer;">👁</button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label">DeepSeek API Key:</label>
+            <div class="input-password-container" style="display: flex; gap: 6px;">
+              <input type="password" id="cfg-deepseek-key" class="field-input" placeholder="sk-..." style="font-family: monospace; font-size: 11px; flex: 1;">
+              <button type="button" class="btn-xs" id="btn-toggle-deepseek-key" style="background: #2a224d; color: #fff; border: 1px solid #3b3370; border-radius: 6px; padding: 0 10px; cursor: pointer;">👁</button>
+            </div>
+            <small style="color: #a09cc0; font-size: 10px; margin-top: 4px; display: block;">Chạy song song: Vừa đồng bộ Xiaozhi vừa kích hoạt trí tuệ Pi AI thấu cảm đa lượt.</small>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
           <button id="btn-reset-default" class="btn-modal-danger">🔄 Khôi phục mặc định</button>
           <button id="btn-save-settings" class="btn-modal-save">💾 Lưu & Kết nối</button>
         </div>
@@ -196,6 +228,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=10.0"></script>
+  <script src="js/app.js?v=11.0"></script>
 </body>
 </html>
