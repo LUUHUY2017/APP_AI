@@ -76,7 +76,7 @@ public partial class SettingsPage : ContentPage
             _activeWebUrl = result.QrUrl ?? $"https://xiaozhi.me/active?code={code}";
 
             OtpCodeLabel.Text = code;
-            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh: {code} và Số Serial: {cleanSerial} trên trang xiaozhi.me:";
+            OtpStatusLabel.Text = $"👉 Nhập Mã xác minh: {code} và Số Serial: {serialNumber} trên trang xiaozhi.me:";
             OpenActiveWebBtn.IsEnabled = true;
         }
         else
