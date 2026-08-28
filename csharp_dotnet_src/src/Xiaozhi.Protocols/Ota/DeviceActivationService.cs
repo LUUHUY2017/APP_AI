@@ -58,15 +58,16 @@ public class DeviceActivationService
             }
             var cleanMac = rawMac;
 
-            // Sinh Serial Number chuẩn định dạng eFuse Xiaozhi: SN-{MD5_8}-{cleanMac}
+            // Sinh Serial Number chuẩn định dạng eFuse Xiaozhi và HMAC key (SHA256)
             var serialNumber = DeviceFingerprint.GenerateSerialNumber(cleanMac);
+            var hmacKey = DeviceFingerprint.GenerateHmacKey(cleanMac);
 
             var payload = new
             {
                 application = new
                 {
                     version = SystemConstants.AppVersion,
-                    elf_sha256 = deviceId
+                    elf_sha256 = hmacKey
                 },
                 board = new
                 {
@@ -97,8 +98,9 @@ public class DeviceActivationService
             request.Headers.Add("Activation-Version", SystemConstants.AppVersion);
             request.Headers.Add("Mac-Address", macAddress);
             request.Headers.Add("Serial-Number", serialNumber);
+            request.Headers.Add("Hmac-Key", hmacKey);
 
-            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {serialNumber}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
+            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {serialNumber}\n  Hmac-Key: {hmacKey}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
