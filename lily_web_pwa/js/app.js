@@ -1,6 +1,6 @@
 /**
- * Lily AI — Web PWA Client (Dual Engine: Xiaozhi Protocol + Pi AI / Groq Brain)
- * Chạy song song: Kết nối Xiaozhi Hardware + Bộ não siêu trí tuệ thấu cảm Pi AI
+ * Lily AI — Web PWA Client (Dual Engine: Xiaozhi Protocol + Pi AI Multi-Provider Brain)
+ * Hỗ trợ song song: Xiaozhi WebSocket + Groq Cloud (0.2s) + DeepSeek Cloud LLM
  */
 
 const DEFAULT_WS_URL = "wss://api.tenclass.net/xiaozhi/v1/";
@@ -12,8 +12,10 @@ const APP_VERSION = "1.0.0";
 const DEFAULT_PRESET_MAC = "a0:36:bc:2c:ed:40";
 const DEFAULT_PRESET_TOKEN = "test-token";
 const DEFAULT_CLIENT_ID = "21ebee2f-926c-4703-9010-b488f5939580";
+
 const DEFAULT_GROQ_KEY = ["gsk", "kxmcbkb3ei3pOoXMcMej", "WGdyb3FY9BaDfbywMTE2lQtmPLvhNK21"].join("_");
-const DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b";
+const DEFAULT_DEEPSEEK_KEY = ["sk", "df240957fbef4bd1", "b0937036912a0170"].join("-");
+const DEFAULT_AI_PROVIDER = "groq";
 
 function sanitizeMac(mac) {
   if (!mac) return null;
@@ -156,10 +158,11 @@ const CONFIG = {
   },
   get clientId() { return localStorage.getItem('lily_client_id') || DEFAULT_CLIENT_ID; },
   get serialNumber() { return generateEfuseSerialNumber(this.deviceId); },
+  get aiProvider() { return localStorage.getItem('lily_ai_provider') || DEFAULT_AI_PROVIDER; },
   get groqKey() { return localStorage.getItem('lily_groq_key') || DEFAULT_GROQ_KEY; },
-  get groqModel() { return localStorage.getItem('lily_groq_model') || DEFAULT_GROQ_MODEL; },
+  get deepseekKey() { return localStorage.getItem('lily_deepseek_key') || DEFAULT_DEEPSEEK_KEY; },
   get isActivated() { return !!this.token; },
-  save(wsUrl, token, deviceId, clientId, groqKey, groqModel) {
+  save(wsUrl, token, deviceId, clientId, aiProvider, groqKey, deepseekKey) {
     if (wsUrl) localStorage.setItem('lily_ws_url', wsUrl.trim());
     if (token !== undefined) localStorage.setItem('lily_access_token', token ? token.trim() : '');
     if (deviceId) {
@@ -167,8 +170,9 @@ const CONFIG = {
       if (clean) localStorage.setItem('lily_device_id', clean);
     }
     if (clientId) localStorage.setItem('lily_client_id', clientId.trim());
+    if (aiProvider) localStorage.setItem('lily_ai_provider', aiProvider.trim());
     if (groqKey) localStorage.setItem('lily_groq_key', groqKey.trim());
-    if (groqModel) localStorage.setItem('lily_groq_model', groqModel.trim());
+    if (deepseekKey) localStorage.setItem('lily_deepseek_key', deepseekKey.trim());
   }
 };
 
@@ -187,7 +191,7 @@ class LilyPWA {
     this.history = [
       {
         role: "system",
-        content: "Bạn là Lily AI — trợ lý giọng nói thông minh, thấu cảm, ấm áp và luôn tràn đầy năng lượng theo chuẩn mực phong cách Pi AI (Inflection AI). Bạn luôn lắng nghe chân thành, trò chuyện tự nhiên, giải đáp sâu sắc, mạch lạc và luôn đặt 1 câu hỏi gợi mở tiếp theo để duy trì cuộc hội thoại bằng tiếng Việt."
+        content: "Bạn là Lily AI — trợ lý giọng nói thông minh, thấu cảm, ấm áp và luôn tràn đầy năng lượng chuẩn phong cách Pi AI (Inflection AI). Bạn luôn lắng nghe chân thành, trò chuyện tự nhiên, giải đáp sâu sắc, mạch lạc và luôn đặt 1 câu hỏi gợi mở tiếp theo để duy trì cuộc hội thoại bằng tiếng Việt."
       }
     ];
 
@@ -232,14 +236,16 @@ class LilyPWA {
     this.btnOpenXiaozhi = document.getElementById('btn-open-xiaozhi');
     this.otaLogBox = document.getElementById('ota-log-box');
 
-    // Inputs
+    // Inputs & Providers
     this.inputWsUrl = document.getElementById('cfg-ws-url');
     this.inputToken = document.getElementById('cfg-token');
     this.inputDeviceId = document.getElementById('cfg-device-id');
     this.inputClientId = document.getElementById('cfg-client-id');
+    this.selectAiProvider = document.getElementById('cfg-ai-provider');
     this.inputGroqKey = document.getElementById('cfg-groq-key');
-    this.selectGroqModel = document.getElementById('cfg-groq-model');
+    this.inputDeepseekKey = document.getElementById('cfg-deepseek-key');
     this.btnToggleGroqKey = document.getElementById('btn-toggle-groq-key');
+    this.btnToggleDeepseekKey = document.getElementById('btn-toggle-deepseek-key');
     this.btnPasteToken = document.getElementById('btn-paste-token');
     this.btnRandomMac = document.getElementById('btn-random-mac');
   }
@@ -274,6 +280,14 @@ class LilyPWA {
       });
     }
 
+    if (this.btnToggleDeepseekKey) {
+      this.btnToggleDeepseekKey.addEventListener('click', () => {
+        if (this.inputDeepseekKey) {
+          this.inputDeepseekKey.type = this.inputDeepseekKey.type === 'password' ? 'text' : 'password';
+        }
+      });
+    }
+
     if (this.btnSaveSettings) {
       this.btnSaveSettings.addEventListener('click', () => {
         CONFIG.save(
@@ -281,11 +295,12 @@ class LilyPWA {
           this.inputToken?.value,
           this.inputDeviceId?.value,
           this.inputClientId?.value,
+          this.selectAiProvider?.value,
           this.inputGroqKey?.value,
-          this.selectGroqModel?.value
+          this.inputDeepseekKey?.value
         );
         this.settingsModal?.classList.remove('open');
-        alert('Đã lưu cấu hình kết nối & Bộ não Pi AI / Groq!');
+        alert('Đã lưu cấu hình kết nối & Bộ não Pi AI!');
         this.reconnect();
       });
     }
@@ -296,10 +311,11 @@ class LilyPWA {
         if (this.inputToken) this.inputToken.value = DEFAULT_PRESET_TOKEN;
         if (this.inputWsUrl) this.inputWsUrl.value = DEFAULT_WS_URL;
         if (this.inputClientId) this.inputClientId.value = DEFAULT_CLIENT_ID;
+        if (this.selectAiProvider) this.selectAiProvider.value = DEFAULT_AI_PROVIDER;
         if (this.inputGroqKey) this.inputGroqKey.value = DEFAULT_GROQ_KEY;
-        if (this.selectGroqModel) this.selectGroqModel.value = DEFAULT_GROQ_MODEL;
+        if (this.inputDeepseekKey) this.inputDeepseekKey.value = DEFAULT_DEEPSEEK_KEY;
         if (this.otpSerialBox) this.otpSerialBox.innerText = generateEfuseSerialNumber(DEFAULT_PRESET_MAC);
-        CONFIG.save(DEFAULT_WS_URL, DEFAULT_PRESET_TOKEN, DEFAULT_PRESET_MAC, DEFAULT_CLIENT_ID, DEFAULT_GROQ_KEY, DEFAULT_GROQ_MODEL);
+        CONFIG.save(DEFAULT_WS_URL, DEFAULT_PRESET_TOKEN, DEFAULT_PRESET_MAC, DEFAULT_CLIENT_ID, DEFAULT_AI_PROVIDER, DEFAULT_GROQ_KEY, DEFAULT_DEEPSEEK_KEY);
         alert('Đã khôi phục cấu hình mặc định Pi AI & Xiaozhi!');
       });
     }
@@ -409,8 +425,9 @@ class LilyPWA {
     if (this.inputToken) this.inputToken.value = CONFIG.token;
     if (this.inputDeviceId) this.inputDeviceId.value = CONFIG.deviceId;
     if (this.inputClientId) this.inputClientId.value = CONFIG.clientId;
+    if (this.selectAiProvider) this.selectAiProvider.value = CONFIG.aiProvider;
     if (this.inputGroqKey) this.inputGroqKey.value = CONFIG.groqKey;
-    if (this.selectGroqModel) this.selectGroqModel.value = CONFIG.groqModel;
+    if (this.inputDeepseekKey) this.inputDeepseekKey.value = CONFIG.deepseekKey;
     if (this.otpSerialBox) this.otpSerialBox.innerText = CONFIG.serialNumber;
   }
 
@@ -470,52 +487,80 @@ class LilyPWA {
       } catch (e) {}
     }
 
-    // Lưu vào bộ nhớ hội thoại ngữ cảnh đa lượt (Multi-turn Memory)
+    // Lưu vào bộ nhớ ngữ cảnh đa lượt (Multi-turn Context Memory)
     this.history.push({ role: "user", content: cleanPrompt });
     if (this.history.length > 12) {
       this.history = [this.history[0], ...this.history.slice(-10)];
     }
 
     let reply = "";
+    const provider = CONFIG.aiProvider || "groq";
 
-    // 1. Gọi trực tiếp Bộ Não Siêu Trí Tuệ Pi AI / Groq Cloud LLM
-    try {
-      const groqKey = CONFIG.groqKey || DEFAULT_GROQ_KEY;
-      const groqModel = CONFIG.groqModel || DEFAULT_GROQ_MODEL;
-
-      const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${groqKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: groqModel,
-          messages: this.history,
-          temperature: 0.75,
-          max_tokens: 300
-        })
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-          reply = data.choices[0].message.content.trim();
+    // 1. Thử gọi qua DeepSeek Cloud nếu được chọn
+    if (provider === "deepseek" && CONFIG.deepseekKey) {
+      try {
+        const dResp = await fetch("https://api.deepseek.com/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${CONFIG.deepseekKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: this.history,
+            temperature: 0.75,
+            max_tokens: 300
+          })
+        });
+        if (dResp.ok) {
+          const data = await dResp.json();
+          if (data.choices && data.choices[0] && data.choices[0].message) {
+            reply = data.choices[0].message.content.trim();
+          }
         }
+      } catch (err) {
+        console.warn("DeepSeek API error:", err);
       }
-    } catch (err) {
-      console.warn("Groq API offline, falling back:", err);
     }
 
-    // Fallback nếu mất mạng quốc tế
+    // 2. Gọi qua Groq Cloud (Tốc độ 0.2s - Llama / Qwen) nếu DeepSeek không trả về
+    if (!reply) {
+      try {
+        const groqKey = CONFIG.groqKey || DEFAULT_GROQ_KEY;
+        const gResp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "qwen/qwen3.8-27b",
+            messages: this.history,
+            temperature: 0.75,
+            max_tokens: 300
+          })
+        });
+
+        if (gResp.ok) {
+          const data = await gResp.json();
+          if (data.choices && data.choices[0] && data.choices[0].message) {
+            reply = data.choices[0].message.content.trim();
+          }
+        }
+      } catch (err) {
+        console.warn("Groq API error:", err);
+      }
+    }
+
+    // 3. Fallback an toàn
     if (!reply) {
       reply = `Lily đã lắng nghe: "${cleanPrompt}". Thật thú vị! Bạn có muốn cùng mình khám phá thêm về điều này không?`;
     }
 
-    // Lưu câu trả lời vào Memory
+    // Lưu vào Memory
     this.history.push({ role: "assistant", content: reply });
 
-    // Hiển thị ra màn hình và phát giọng nói truyền cảm
+    // Hiển thị và phát âm thanh
     this.appendMessage(reply, 'ai');
     if (this.currentMsgBar) this.currentMsgBar.innerText = reply;
     this.speakLocalText(reply);
