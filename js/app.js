@@ -435,11 +435,6 @@ class LilyPWA {
       return false;
     }
 
-    this.setStatus('⚠️ Server chưa cấp mã OTP', false);
-    this.currentMsgBar.innerText = '⚠️ Server chưa cấp mã OTP cho thiết bị này. Bấm 🔄 để thử lại.';
-    return false;
-  }
-
   /**
    * Hiển thị bảng mã OTP và hướng dẫn kích hoạt
    */
