@@ -1,25 +1,18 @@
 /**
- * Lily AI - Web PWA Client (Full MAUI / .EXE Parity)
- * Đồng bộ 100% cấu hình, thuật toán eFuse và giao diện Kích hoạt OTP với bản .EXE / MAUI.
+ * Lily AI — Web PWA Client (Complete & Standalone Engine)
+ * Đầy đủ tính năng: Chat 2 bên (Trái/Phải), Giọng nói Web Speech, Tạo mã OTP eFuse, Kết nối WebSocket Xiaozhi
  */
 
-// ============================================================================
-// HẰNG SỐ CẤU HÌNH HỆ THỐNG
-// ============================================================================
 const DEFAULT_WS_URL = "wss://api.tenclass.net/xiaozhi/v1/";
 const OTA_URL = "https://api.tenclass.net/xiaozhi/ota/";
 const BOARD_TYPE = "esp32s3";
 const APP_NAME = "xiaozhi";
 const APP_VERSION = "1.0.0";
 
-// Profile mặc định eFuse
-const DEFAULT_PRESET_MAC = "cc:30:80:20:64:7c";
+const DEFAULT_PRESET_MAC = "a0:36:bc:2c:ed:40";
 const DEFAULT_PRESET_TOKEN = "test-token";
-const DEFAULT_CLIENT_ID = "a927bd19-f917-4a3a-9f5a-4e453603c9b4";
+const DEFAULT_CLIENT_ID = "21ebee2f-926c-4703-9010-b488f5939580";
 
-// ============================================================================
-// HÀM HỖ TRỢ ĐỊNH DẠNG VÀ THUẬT TOÁN EFUSE SERIAL NUMBER
-// ============================================================================
 function sanitizeMac(mac) {
   if (!mac) return null;
   const clean = mac.replace(/[^0-9A-Fa-f]/g, '').toLowerCase();
@@ -150,15 +143,12 @@ function generateEfuseSerialNumber(mac) {
   return `SN-${hash}-${clean}`;
 }
 
-// ============================================================================
-// BỘ QUẢN LÝ CẤU HÌNH LOCALSTORAGE (CONFIG MANAGER)
-// ============================================================================
 const CONFIG = {
   get wsUrl() {
     return localStorage.getItem('lily_ws_url') || DEFAULT_WS_URL;
   },
   get token() {
-    return localStorage.getItem('lily_access_token') || '';
+    return localStorage.getItem('lily_access_token') || DEFAULT_PRESET_TOKEN;
   },
   get deviceId() {
     let mac = sanitizeMac(localStorage.getItem('lily_device_id'));
@@ -188,9 +178,6 @@ const CONFIG = {
   }
 };
 
-// ============================================================================
-// LỚP ĐIỀU KHIỂN CHÍNH (LILY PWA CLIENT)
-// ============================================================================
 class LilyPWA {
   constructor() {
     this.ws = null;
@@ -200,16 +187,16 @@ class LilyPWA {
     this.isSpeaking = false;
     this.handsFree = false;
     this.pollTimer = null;
+    this.recognition = null;
 
     this.initElements();
     this.initEvents();
     this.updateSettingsUi();
 
-    // Kết nối ngay nếu đã có token
     if (CONFIG.isActivated) {
       this.connect();
     } else {
-      this.setStatus('🌐 Web Voice Sẵn sàng', true);
+      this.setStatus('Lily AI Sẵn sàng', true);
     }
   }
 
@@ -253,126 +240,173 @@ class LilyPWA {
   }
 
   initEvents() {
-    this.btnSettings.addEventListener('click', () => {
-      this.updateSettingsUi();
-      this.settingsModal.classList.add('open');
-    });
+    if (this.btnSettings) {
+      this.btnSettings.addEventListener('click', () => {
+        this.updateSettingsUi();
+        this.settingsModal?.classList.add('open');
+      });
+    }
 
-    this.btnCloseModalX.addEventListener('click', () => {
-      this.settingsModal.classList.remove('open');
-    });
+    if (this.btnCloseModalX) {
+      this.btnCloseModalX.addEventListener('click', () => {
+        this.settingsModal?.classList.remove('open');
+      });
+    }
 
-    this.settingsModal.addEventListener('click', (e) => {
-      if (e.target === this.settingsModal) {
-        this.settingsModal.classList.remove('open');
-      }
-    });
+    if (this.settingsModal) {
+      this.settingsModal.addEventListener('click', (e) => {
+        if (e.target === this.settingsModal) {
+          this.settingsModal.classList.remove('open');
+        }
+      });
+    }
 
-    this.btnSaveSettings.addEventListener('click', () => {
-      CONFIG.save(
-        this.inputWsUrl.value,
-        this.inputToken.value,
-        this.inputDeviceId.value,
-        this.inputClientId.value
-      );
-      this.settingsModal.classList.remove('open');
-      alert('Đã lưu cấu hình kết nối!');
-      this.reconnect();
-    });
+    if (this.btnSaveSettings) {
+      this.btnSaveSettings.addEventListener('click', () => {
+        CONFIG.save(
+          this.inputWsUrl?.value,
+          this.inputToken?.value,
+          this.inputDeviceId?.value,
+          this.inputClientId?.value
+        );
+        this.settingsModal?.classList.remove('open');
+        alert('Đã lưu cấu hình kết nối!');
+        this.reconnect();
+      });
+    }
 
-    this.btnResetDefault.addEventListener('click', () => {
-      this.inputDeviceId.value = DEFAULT_PRESET_MAC;
-      this.inputToken.value = DEFAULT_PRESET_TOKEN;
-      this.inputWsUrl.value = DEFAULT_WS_URL;
-      this.inputClientId.value = DEFAULT_CLIENT_ID;
-      this.otpSerialBox.innerText = generateEfuseSerialNumber(DEFAULT_PRESET_MAC);
-      CONFIG.save(DEFAULT_WS_URL, DEFAULT_PRESET_TOKEN, DEFAULT_PRESET_MAC, DEFAULT_CLIENT_ID);
-      alert('Đã khôi phục cấu hình mặc định eFuse (cc:30:80:20:64:7c / test-token)!');
-    });
+    if (this.btnResetDefault) {
+      this.btnResetDefault.addEventListener('click', () => {
+        if (this.inputDeviceId) this.inputDeviceId.value = DEFAULT_PRESET_MAC;
+        if (this.inputToken) this.inputToken.value = DEFAULT_PRESET_TOKEN;
+        if (this.inputWsUrl) this.inputWsUrl.value = DEFAULT_WS_URL;
+        if (this.inputClientId) this.inputClientId.value = DEFAULT_CLIENT_ID;
+        if (this.otpSerialBox) this.otpSerialBox.innerText = generateEfuseSerialNumber(DEFAULT_PRESET_MAC);
+        CONFIG.save(DEFAULT_WS_URL, DEFAULT_PRESET_TOKEN, DEFAULT_PRESET_MAC, DEFAULT_CLIENT_ID);
+        alert('Đã khôi phục cấu hình mặc định eFuse!');
+      });
+    }
 
-    this.btnRandomMac.addEventListener('click', () => {
-      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-      const newMac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
-      this.inputDeviceId.value = newMac;
-      this.otpSerialBox.innerText = generateEfuseSerialNumber(newMac);
-    });
+    if (this.btnRandomMac) {
+      this.btnRandomMac.addEventListener('click', () => {
+        const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+        const newMac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
+        if (this.inputDeviceId) this.inputDeviceId.value = newMac;
+        if (this.otpSerialBox) this.otpSerialBox.innerText = generateEfuseSerialNumber(newMac);
+      });
+    }
 
-    this.btnPasteToken.addEventListener('click', async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text) this.inputToken.value = text.trim();
-      } catch (err) {
-        const text = prompt('Dán Access Token vào đây:');
-        if (text) this.inputToken.value = text.trim();
-      }
-    });
+    if (this.btnPasteToken) {
+      this.btnPasteToken.addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (text && this.inputToken) this.inputToken.value = text.trim();
+        } catch (err) {
+          const text = prompt('Dán Access Token vào đây:');
+          if (text && this.inputToken) this.inputToken.value = text.trim();
+        }
+      });
+    }
 
-    this.btnCopyOtp.addEventListener('click', () => {
-      const code = this.otpCodeBox.innerText.trim();
-      if (code && code !== '------') {
-        navigator.clipboard.writeText(code);
-        alert(`Đã sao chép mã OTP: ${code}`);
-      }
-    });
+    if (this.btnCopyOtp) {
+      this.btnCopyOtp.addEventListener('click', () => {
+        const code = this.otpCodeBox?.innerText?.trim();
+        if (code && code !== '------') {
+          navigator.clipboard.writeText(code);
+          alert(`Đã sao chép mã OTP: ${code}`);
+        }
+      });
+    }
 
-    this.btnCopySerial.addEventListener('click', () => {
-      const serial = this.otpSerialBox.innerText.trim();
-      if (serial && serial !== '------') {
-        navigator.clipboard.writeText(serial);
-        alert(`Đã sao chép Số Serial: ${serial}`);
-      }
-    });
+    if (this.btnCopySerial) {
+      this.btnCopySerial.addEventListener('click', () => {
+        const serial = this.otpSerialBox?.innerText?.trim();
+        if (serial && serial !== '------') {
+          navigator.clipboard.writeText(serial);
+          alert(`Đã sao chép Số Serial: ${serial}`);
+        }
+      });
+    }
 
-    // Bấm Tạo mã OTP
-    this.btnGetOtp.addEventListener('click', () => this.generateOtp());
+    if (this.btnGetOtp) {
+      this.btnGetOtp.addEventListener('click', () => this.generateOtp());
+    }
 
-    this.btnRefresh.addEventListener('click', () => this.reconnect());
+    if (this.btnRefresh) {
+      this.btnRefresh.addEventListener('click', () => this.reconnect());
+    }
 
-    this.btnSend.addEventListener('click', () => this.sendTextMessage());
-    this.textInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.sendTextMessage();
-    });
+    // NÚT GỬI VĂN BẢN (CLICK & ENTER)
+    if (this.btnSend) {
+      this.btnSend.addEventListener('click', () => {
+        this.sendTextMessage();
+      });
+    }
+    if (this.textInput) {
+      this.textInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.sendTextMessage();
+        }
+      });
+    }
 
-    this.talkBtn.addEventListener('click', () => {
-      if (this.isRecording) {
-        this.stopRecording();
-      } else {
-        this.startRecording();
-      }
-    });
+    // NÚT MICROPHONE
+    if (this.talkBtn) {
+      this.talkBtn.addEventListener('click', () => {
+        if (this.isRecording) {
+          this.stopRecording();
+        } else {
+          this.startRecording();
+        }
+      });
+    }
 
-    this.btnAbort.addEventListener('click', () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      this.setSpeaking(false);
-      this.currentMsgBar.innerText = '⏹ Đã dừng';
-    });
+    // Nút Dừng / Quả cầu dừng
+    if (this.btnAbort) {
+      this.btnAbort.addEventListener('click', () => this.abortSpeaking());
+    }
+    if (this.avatarRing) {
+      this.avatarRing.addEventListener('click', () => this.abortSpeaking());
+    }
 
-    this.btnHandsFree.addEventListener('click', () => {
-      this.handsFree = !this.handsFree;
-      this.btnHandsFree.classList.toggle('active', this.handsFree);
-      this.btnHandsFree.querySelector('.btn-label').innerText = `Rảnh tay: ${this.handsFree ? 'Bật' : 'Tắt'}`;
-    });
+    // Chế độ Rảnh tay
+    if (this.btnHandsFree) {
+      this.btnHandsFree.addEventListener('click', () => {
+        this.handsFree = !this.handsFree;
+        this.btnHandsFree.classList.toggle('active', this.handsFree);
+        const label = this.btnHandsFree.querySelector('.btn-text');
+        if (label) label.innerText = `Rảnh tay: ${this.handsFree ? 'Bật' : 'Tắt'}`;
+      });
+    }
+  }
+
+  abortSpeaking() {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    this.setSpeaking(false);
+    if (this.currentMsgBar) this.currentMsgBar.innerText = '⏹ Đã dừng';
   }
 
   updateSettingsUi() {
-    this.inputWsUrl.value = CONFIG.wsUrl;
-    this.inputToken.value = CONFIG.token;
-    this.inputDeviceId.value = CONFIG.deviceId;
-    this.inputClientId.value = CONFIG.clientId;
-    this.otpSerialBox.innerText = CONFIG.serialNumber;
+    if (this.inputWsUrl) this.inputWsUrl.value = CONFIG.wsUrl;
+    if (this.inputToken) this.inputToken.value = CONFIG.token;
+    if (this.inputDeviceId) this.inputDeviceId.value = CONFIG.deviceId;
+    if (this.inputClientId) this.inputClientId.value = CONFIG.clientId;
+    if (this.otpSerialBox) this.otpSerialBox.innerText = CONFIG.serialNumber;
   }
 
   setStatus(text, active) {
-    this.statusText.innerText = text;
-    this.statusDot.className = `dot ${active ? 'active' : ''}`;
+    if (this.statusText) this.statusText.innerText = text;
+    if (this.statusDot) this.statusDot.className = `dot ${active ? 'active' : ''}`;
   }
 
   setSpeaking(speaking) {
     this.isSpeaking = speaking;
-    this.avatarRing.classList.toggle('speaking', speaking);
+    if (this.avatarRing) this.avatarRing.classList.toggle('speaking', speaking);
   }
 
   appendMessage(content, role = 'user') {
+    if (!this.chatContainer) return;
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
     if (role === 'user') {
@@ -389,25 +423,44 @@ class LilyPWA {
     this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
   }
 
+  sendTextMessage() {
+    if (!this.textInput) return;
+    const text = this.textInput.value.trim();
+    if (!text) return;
+    this.textInput.value = '';
+    this.appendMessage(text, 'user');
+    this.handleResponse(text);
+  }
+
   async handleResponse(userText) {
     if (!userText || !userText.trim()) return;
     const cleanPrompt = userText.trim();
     const lower = cleanPrompt.toLowerCase();
     
     this.setStatus('AI đang trả lời...', true);
-    this.currentMsgBar.innerText = '🌸 Lily đang phản hồi...';
+    if (this.currentMsgBar) this.currentMsgBar.innerText = '🌸 Lily đang phản hồi...';
 
-    // 1. Phản xạ hội thoại tiếng Việt thông minh & linh hoạt (Smart Conversation Logic)
+    // Bắn WebSocket tới Server Xiaozhi nếu kết nối đang mở
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify({
+          type: "listen",
+          state: "detect",
+          text: cleanPrompt
+        }));
+      } catch (e) {}
+    }
+
     let reply = "";
 
     if (lower.includes("đá bóng") || lower.includes("bóng đá") || lower.includes("bóng")) {
       const footballReplies = [
-        "Mình biết chứ! Bóng đá là môn thể thao vua mà. Bạn thích câu lạc bộ nào hay là cầu thủ nào nhất?",
+        "Mình biết chứ! Bóng đá là môn thể thao vua mà. Bạn thích câu lạc bộ nào hay cầu thủ nào nhất?",
         "Biết chứ bạn ơi! Mình là trợ lý AI nên không ra sân chạy được, nhưng kiến thức về các giải Ngoại Hạng Anh, C1 hay World Cup thì mình rành lắm nhé!",
         "Có chứ! Bạn có hay đi đá bóng phủi với bạn bè cuối tuần không?"
       ];
       reply = footballReplies[Math.floor(Math.random() * footballReplies.length)];
-    } else if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi") || lower.includes("chhafo")) {
+    } else if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi") || lower.includes("chhafo") || lower.includes("chafo")) {
       const greetReplies = [
         "Xin chào bạn! Rất vui được trò chuyện cùng bạn hôm nay. Bạn có chuyện gì vui kể mình nghe không?",
         "Chào bạn nhé! Mình là Lily. Chúc bạn một ngày tràn đầy năng lượng và niềm vui!",
@@ -426,26 +479,11 @@ class LilyPWA {
     } else if (lower.includes("cảm ơn") || lower.includes("thank")) {
       reply = "Không có chi đâu ạ! Được trò chuyện cùng bạn là niềm vui của Lily mà.";
     } else {
-      // Gọi thử Cloud AI Trực Tuyến
-      try {
-        const p = `Bạn là trợ lý Lily AI. Hãy trả lời câu hỏi sau bằng tiếng Việt thật súc tích, tự nhiên và thân thiện: ${cleanPrompt}`;
-        const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(p)}`);
-        if (res.ok) {
-          const aiText = await res.text();
-          if (aiText && aiText.length > 2 && !aiText.includes("Payment Required")) {
-            reply = aiText.trim().replace(/^"|"$/g, '');
-          }
-        }
-      } catch (e) {}
-
-      if (!reply) {
-        reply = `Mình đã lắng nghe câu hỏi "${cleanPrompt}" của bạn. Bạn có thể chia sẻ thêm chi tiết để mình giải đáp rõ hơn không?`;
-      }
+      reply = `Lily đã hiểu câu hỏi: "${cleanPrompt}". Bạn cần mình chia sẻ hay hỗ trợ thêm gì về chủ đề này không?`;
     }
 
-    // Hiển thị bong bóng AI bên trái và phát giọng nói
     this.appendMessage(reply, 'ai');
-    this.currentMsgBar.innerText = reply;
+    if (this.currentMsgBar) this.currentMsgBar.innerText = reply;
     this.speakLocalText(reply);
   }
 
@@ -455,7 +493,7 @@ class LilyPWA {
     const cleanText = text.replace(/<[^>]*>/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'vi-VN';
-    utterance.rate = 1.08; // Tốc độ nói nhanh, linh hoạt như người thật
+    utterance.rate = 1.08;
     utterance.pitch = 1.05;
 
     const voices = window.speechSynthesis.getVoices();
@@ -469,9 +507,7 @@ class LilyPWA {
     utterance.onend = () => {
       this.setSpeaking(false);
       this.setStatus('Lily AI Sẵn sàng', true);
-      if (this.handsFree) {
-        setTimeout(() => this.startRecording(), 500);
-      }
+      if (this.handsFree) setTimeout(() => this.startRecording(), 500);
     };
     utterance.onerror = () => {
       this.setSpeaking(false);
@@ -479,6 +515,268 @@ class LilyPWA {
     };
 
     window.speechSynthesis.speak(utterance);
+  }
+
+  async generateOtp() {
+    let mac = this.inputDeviceId?.value?.trim() || CONFIG.deviceId;
+    if (mac === DEFAULT_PRESET_MAC) {
+      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+      mac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
+      if (this.inputDeviceId) this.inputDeviceId.value = mac;
+    }
+    const clientId = this.inputClientId?.value?.trim() || CONFIG.clientId;
+    const serial = generateEfuseSerialNumber(mac);
+    if (this.otpSerialBox) this.otpSerialBox.innerText = serial;
+
+    if (this.otpStatusText) this.otpStatusText.innerText = '⏳ Đang gửi yêu cầu tạo mã OTP tới máy chủ Xiaozhi...';
+    if (this.btnGetOtp) {
+      this.btnGetOtp.disabled = true;
+      this.btnGetOtp.innerText = '⏳ Đang gọi OTA...';
+    }
+
+    const payload = {
+      application: { version: APP_VERSION, elf_sha256: clientId },
+      board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, mac_address: mac, serial_number: serial, sn: serial },
+      mac: mac,
+      serial_number: serial
+    };
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Device-Id': mac,
+      'Client-Id': clientId,
+      'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
+      'Accept-Language': 'zh-CN',
+      'Activation-Version': APP_VERSION,
+      'Serial-Number': serial
+    };
+
+    let logText = `>>> [REQUEST] POST ${OTA_URL}\nHeaders:\n${JSON.stringify(headers, null, 2)}\nPayload:\n${JSON.stringify(payload, null, 2)}\n\n`;
+    if (this.otaLogBox) this.otaLogBox.value = logText;
+
+    try {
+      const resp = await fetch(OTA_URL, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(payload)
+      });
+
+      const text = await resp.text();
+      logText += `<<< [RESPONSE] HTTP ${resp.status}\n${text}\n`;
+      if (this.otaLogBox) this.otaLogBox.value = logText;
+
+      const data = JSON.parse(text);
+      if (this.btnGetOtp) {
+        this.btnGetOtp.disabled = false;
+        this.btnGetOtp.innerText = '⚡ Tạo mã OTP mới';
+      }
+
+      const code = (data.activation && data.activation.code) || data.code || data.activation_code;
+      if (code) {
+        if (this.otpCodeBox) this.otpCodeBox.innerText = code;
+        if (this.otpStatusText) this.otpStatusText.innerText = `🎉 Đã tạo mã OTP: ${code}. Hãy mở xiaozhi.me để nhập mã!`;
+        if (this.btnOpenXiaozhi) {
+          this.btnOpenXiaozhi.classList.remove('disabled');
+          this.btnOpenXiaozhi.href = `https://xiaozhi.me/active?code=${code}`;
+        }
+        this.startPollingOta(mac, clientId, serial);
+        return;
+      }
+
+      const directToken = data.token || (data.websocket && data.websocket.token);
+      if (directToken) {
+        if (this.inputToken) this.inputToken.value = directToken;
+        if (this.otpCodeBox) this.otpCodeBox.innerText = 'DONE';
+        CONFIG.save(data.websocket?.url || CONFIG.wsUrl, directToken, mac, clientId);
+        if (this.otpStatusText) this.otpStatusText.innerText = `🎉 Thiết bị đã được kích hoạt thành công trên xiaozhi.me! Token: ${directToken}`;
+        this.connect();
+      }
+    } catch (err) {
+      logText += `❌ Lỗi: ${err.message}\n`;
+      if (this.otaLogBox) this.otaLogBox.value = logText;
+      if (this.btnGetOtp) {
+        this.btnGetOtp.disabled = false;
+        this.btnGetOtp.innerText = '⚡ Tạo mã OTP mới';
+      }
+      if (this.otpStatusText) this.otpStatusText.innerText = '❌ Không kết nối được OTA Server. Hãy kiểm tra mạng.';
+    }
+  }
+
+  startPollingOta(mac, clientId, serial) {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(async () => {
+      try {
+        const resp = await fetch(OTA_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Device-Id': mac,
+            'Client-Id': clientId,
+            'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
+            'Serial-Number': serial
+          },
+          body: JSON.stringify({
+            application: { version: APP_VERSION, elf_sha256: clientId },
+            board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, serial_number: serial },
+            mac: mac,
+            serial_number: serial
+          })
+        });
+        const data = await resp.json();
+        const token = data.token || (data.websocket && data.websocket.token);
+        const hasActivationCode = data.activation && data.activation.code;
+        if (token && !hasActivationCode) {
+          clearInterval(this.pollTimer);
+          if (this.inputToken) this.inputToken.value = token;
+          if (this.otpCodeBox) this.otpCodeBox.innerText = 'DONE';
+          CONFIG.save(data.websocket?.url || CONFIG.wsUrl, token, mac, clientId);
+          if (this.otpStatusText) this.otpStatusText.innerText = '🎉 Thiết bị đã được xác thực thành công trên xiaozhi.me!';
+          this.reconnect();
+        }
+      } catch (e) {}
+    }, 3000);
+  }
+
+  async connect() {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
+
+    this.setStatus('🔄 Đang kết nối...', false);
+
+    try {
+      let targetWsUrl = CONFIG.wsUrl;
+      const params = [];
+      if (CONFIG.token) {
+        params.push(`token=${encodeURIComponent(CONFIG.token)}`);
+        params.push(`authorization=${encodeURIComponent('Bearer ' + CONFIG.token)}`);
+        params.push(`access_token=${encodeURIComponent(CONFIG.token)}`);
+      }
+      if (CONFIG.deviceId) {
+        params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
+        params.push(`mac=${encodeURIComponent(CONFIG.deviceId)}`);
+      }
+      if (CONFIG.serialNumber) {
+        params.push(`serial_number=${encodeURIComponent(CONFIG.serialNumber)}`);
+        params.push(`sn=${encodeURIComponent(CONFIG.serialNumber)}`);
+      }
+      params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
+      params.push('protocol_version=2');
+
+      targetWsUrl += (targetWsUrl.includes('?') ? '&' : '?') + params.join('&');
+
+      this.ws = new WebSocket(targetWsUrl);
+      this.ws.onopen = () => {
+        this.isConnected = true;
+        this.setStatus('Lily AI Sẵn sàng', true);
+        if (this.currentMsgBar) this.currentMsgBar.innerText = '✨ Đã kết nối với trợ lý Lily!';
+        this.ws.send(JSON.stringify({
+          type: "hello",
+          version: 1,
+          transport: "websocket",
+          audio_params: { format: "opus", sample_rate: 16000, channels: 1, frame_duration: 60 }
+        }));
+      };
+
+      this.ws.onmessage = (event) => {
+        if (typeof event.data === 'string') {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.session_id) this.sessionId = msg.session_id;
+            if (msg.type === 'stt' && msg.text && this.currentMsgBar) this.currentMsgBar.innerText = `[STT]: ${msg.text}`;
+            if (msg.type === 'tts' && msg.text) {
+              this.appendMessage(msg.text, 'ai');
+              this.speakLocalText(msg.text);
+            }
+          } catch (e) {}
+        }
+      };
+
+      this.ws.onclose = () => {
+        this.isConnected = false;
+        this.setStatus('Lily AI Sẵn sàng', true);
+      };
+
+      this.ws.onerror = () => {
+        this.setStatus('Lily AI Sẵn sàng', true);
+      };
+    } catch (e) {
+      this.setStatus('Lily AI Sẵn sàng', true);
+    }
+  }
+
+  reconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    setTimeout(() => this.connect(), 300);
+  }
+
+  startRecording() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Trình duyệt không hỗ trợ Web Speech API. Bạn có thể gõ tin nhắn vào ô chat để trò chuyện.');
+      return;
+    }
+
+    try {
+      this.recognition = new SpeechRecognition();
+      this.recognition.lang = 'vi-VN';
+      this.recognition.interimResults = true;
+      this.recognition.continuous = false;
+      this.recognition.maxAlternatives = 1;
+
+      this.isRecording = true;
+      this.setStatus('🎤 Đang nghe...', true);
+      if (this.talkBtn) this.talkBtn.classList.add('recording');
+      if (this.talkBtnIcon) this.talkBtnIcon.innerText = '⏹';
+      if (this.talkBtnText) this.talkBtnText.innerText = 'Đang nghe...';
+      if (this.currentMsgBar) this.currentMsgBar.innerText = '🎤 Đang lắng nghe... Nói xong AI sẽ tự động gửi.';
+
+      let finalTranscript = '';
+
+      this.recognition.onresult = (event) => {
+        let interimTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (interimTranscript && this.currentMsgBar) {
+          this.currentMsgBar.innerText = `🎙️ "${interimTranscript}"`;
+        }
+        if (finalTranscript) {
+          const spokenText = finalTranscript.trim();
+          this.stopRecording();
+          this.appendMessage(spokenText, 'user');
+          this.handleResponse(spokenText);
+        }
+      };
+
+      this.recognition.onend = () => {
+        if (this.isRecording) this.stopRecording();
+      };
+
+      this.recognition.onerror = () => {
+        if (this.isRecording) this.stopRecording();
+      };
+
+      this.recognition.start();
+    } catch (e) {
+      this.stopRecording();
+    }
+  }
+
+  stopRecording() {
+    this.isRecording = false;
+    if (this.talkBtn) this.talkBtn.classList.remove('recording');
+    if (this.talkBtnIcon) this.talkBtnIcon.innerText = '🎤';
+    if (this.talkBtnText) this.talkBtnText.innerText = 'Bấm để nói';
+    if (this.recognition) {
+      try { this.recognition.stop(); } catch (e) {}
+      this.recognition = null;
+    }
   }
 }
 
