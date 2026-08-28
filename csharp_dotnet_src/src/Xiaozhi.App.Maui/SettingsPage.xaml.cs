@@ -52,8 +52,8 @@ public partial class SettingsPage : ContentPage
 
         // Server đăng ký "serial_number" là MAC đã bỏ dấu ":" (xem DeviceActivationService.cs),
         // nên phải hiển thị/copy đúng định dạng này để nhập trên xiaozhi.me, tránh lỗi "Serial number required/invalid".
-        var cleanSerial = macAddress.Replace(":", "").Replace("-", "").ToLowerInvariant();
-        SerialNoLabel.Text = cleanSerial;
+        var serialNumber = DeviceFingerprint.GenerateSerialNumber(macAddress);
+        SerialNoLabel.Text = serialNumber;
         OtpStatusLabel.Text = "⏳ Đang kết nối OTA Server lấy mã OTP...";
         OtpCodeLabel.Text = "******";
 
@@ -148,7 +148,7 @@ public partial class SettingsPage : ContentPage
                 rawMac = GetOrCreateUniqueMacAddress();
             }
             // Luôn chuẩn hoá về dạng không dấu ":" để khớp với serial_number đã đăng ký với OTA server.
-            serial = rawMac.Replace(":", "").Replace("-", "").ToLowerInvariant();
+            serial = DeviceFingerprint.GenerateSerialNumber(rawMac);
         }
 
         if (!string.IsNullOrWhiteSpace(serial))

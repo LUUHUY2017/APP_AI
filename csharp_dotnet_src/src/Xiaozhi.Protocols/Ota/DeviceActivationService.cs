@@ -38,7 +38,7 @@ public class DeviceActivationService
         var result = new ActivationResult();
         try
         {
-            // Chuẩn hoá và làm sạch MAC: Xử lý trường hợp có nhiều MAC ngăn cách bằng khoảng trắng (ví dụ trên iOS)
+            // Chuẩn hoá và làm sạch MAC
             var firstMacPart = (macAddress ?? "").Split(new[] { ' ', ',', ';', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
             var rawMac = new string(firstMacPart.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
             if (rawMac.Length >= 12)
@@ -58,6 +58,9 @@ public class DeviceActivationService
             }
             var cleanMac = rawMac;
 
+            // Sinh Serial Number chuẩn định dạng eFuse Xiaozhi: SN-{MD5_8}-{cleanMac}
+            var serialNumber = DeviceFingerprint.GenerateSerialNumber(cleanMac);
+
             var payload = new
             {
                 application = new
@@ -72,13 +75,13 @@ public class DeviceActivationService
                     ip = GetLocalIpAddress(),
                     mac = macAddress,
                     mac_address = macAddress,
-                    serial_number = cleanMac,
-                    sn = cleanMac
+                    serial_number = serialNumber,
+                    sn = serialNumber
                 },
                 mac = macAddress,
                 mac_address = macAddress,
-                serial_number = cleanMac,
-                sn = cleanMac
+                serial_number = serialNumber,
+                sn = serialNumber
             };
 
             var jsonBody = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
@@ -93,9 +96,9 @@ public class DeviceActivationService
             request.Headers.Add("Accept-Language", "zh-CN");
             request.Headers.Add("Activation-Version", SystemConstants.AppVersion);
             request.Headers.Add("Mac-Address", macAddress);
-            request.Headers.Add("Serial-Number", cleanMac);
+            request.Headers.Add("Serial-Number", serialNumber);
 
-            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {cleanMac}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
+            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {serialNumber}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();
