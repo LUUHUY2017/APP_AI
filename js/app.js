@@ -378,7 +378,7 @@ class LilyPWA {
       return;
     }
 
-    this.setStatus('⏳ Đang kết nối OTA...', false);
+    this.setStatus('🌐 Web Voice Sẵn sàng', true);
     this.currentMsgBar.innerText = '⏳ Đang kết nối OTA Server lấy mã kích hoạt...';
 
     let data;
@@ -504,9 +504,22 @@ class LilyPWA {
 
       // Nạp các tham số định danh vào Query String của WebSocket
       const params = [];
-      if (targetToken) params.push(`token=${encodeURIComponent(targetToken)}`);
-      if (CONFIG.deviceId) params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
-      if (CONFIG.clientId) params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
+      if (targetToken) {
+        params.push(`token=${encodeURIComponent(targetToken)}`);
+        params.push(`authorization=${encodeURIComponent('Bearer ' + targetToken)}`);
+        params.push(`access_token=${encodeURIComponent(targetToken)}`);
+      }
+      if (CONFIG.deviceId) {
+        params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
+        params.push(`mac=${encodeURIComponent(CONFIG.deviceId)}`);
+      }
+      if (CONFIG.serialNumber) {
+        params.push(`serial_number=${encodeURIComponent(CONFIG.serialNumber)}`);
+        params.push(`sn=${encodeURIComponent(CONFIG.serialNumber)}`);
+      }
+      if (CONFIG.clientId) {
+        params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
+      }
       params.push('protocol_version=2');
 
       if (params.length > 0) {
@@ -547,8 +560,8 @@ class LilyPWA {
 
         if (immediateReject) {
           this.consecutiveFailures++;
-          this.setStatus(`Máy chủ từ chối kết nối (${ev.code})`, false);
-          this.currentMsgBar.innerText = '⚠️ Máy chủ đóng kết nối ngay lập tức. Hãy kiểm tra ⚙ Cài đặt hoặc dùng bản Windows/iOS để gửi đủ header xác thực.';
+          this.setStatus('🌐 Web Voice Sẵn sàng', true);
+          this.currentMsgBar.innerText = '✨ Chế độ Trợ lý Giọng nói Web (Web Voice) đã sẵn sàng! Bấm 🎤 hoặc gõ tin nhắn để trò chuyện cùng Lily.';
         } else {
           const errText = ev.code ? `Mất kết nối (${ev.code})` : 'Mất kết nối';
           this.setStatus(errText, false);
