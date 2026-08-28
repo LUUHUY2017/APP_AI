@@ -262,9 +262,14 @@ class LilyPWA {
 
     // Kích hoạt lại bằng OTP (Xóa token cũ và mở lại luồng OTA)
     this.btnReactivate.addEventListener('click', () => {
-      this.settingsModal.classList.remove('open');
-      CONFIG.save(CONFIG.wsUrl, '', CONFIG.deviceId, CONFIG.clientId);
-      if (this.ws) { this.ws.close(); this.ws = null; }
+      this.closeModal(this.settingsModal);
+      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+      const newMac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
+      localStorage.removeItem('lily_access_token');
+      localStorage.setItem('lily_device_id', newMac);
+      this.inputDeviceId.value = newMac;
+      this.inputToken.value = '';
+      CONFIG.save(CONFIG.wsUrl, '', newMac, CONFIG.clientId);
       this.startActivationFlow();
     });
 
@@ -400,27 +405,33 @@ class LilyPWA {
    * - Nếu trả về Mã OTP -> Hiển thị Modal để người dùng kích hoạt trên xiaozhi.me.
    */
   applyOtaResult(data) {
-    if (!data) return false;
+      if (!data) return false;
 
-    // Trường hợp 1: Server đã cấp trực tiếp Token (thiết bị đã được duyệt)
-    const directToken = data.token || (data.websocket && data.websocket.token);
-    const directWs = (data.websocket && data.websocket.url) || data.url || data.ws_url;
+      // Ưu tiên 1: Nếu Server cấp mã xác minh OTP (Cần nhập trên xiaozhi.me)
+      const code = (data.activation && data.activation.code) || data.code || data.activation_code || (data.data && data.data.code) || (data.p2p && data.p2p.code);
+      if (code) {
+        console.log('OTA returned activation OTP code:', code);
+        this.showActivationModal(code);
+        this.startPolling();
+        return false;
+      }
 
-    if (directToken) {
-      console.log('OTA direct activation received token!');
-      CONFIG.save(directWs || CONFIG.wsUrl, directToken, CONFIG.deviceId, CONFIG.clientId);
-      this.hideActivationModal();
-      this.setStatus('✅ Đã kích hoạt', true);
-      this.currentMsgBar.innerText = '🎉 Kích hoạt thành công! Đang kết nối...';
-      this.connect();
-      return true;
-    }
+      // Ưu tiên 2: Nếu thiết bị đã được duyệt/kích hoạt trên xiaozhi.me
+      const directToken = data.token || (data.websocket && data.websocket.token);
+      const directWs = (data.websocket && data.websocket.url) || data.url || data.ws_url;
 
-    // Trường hợp 2: Server cấp mã xác minh OTP (Activation Code)
-    const code = data.code || data.activation_code || (data.data && data.data.code) || (data.p2p && data.p2p.code);
-    if (code) {
-      this.showActivationModal(code);
-      this.startPolling();
+      if (directToken) {
+        console.log('OTA activation received token:', directToken);
+        CONFIG.save(directWs || CONFIG.wsUrl, directToken, CONFIG.deviceId, CONFIG.clientId);
+        this.hideActivationModal();
+        this.setStatus('✅ Đã kích hoạt', true);
+        this.currentMsgBar.innerText = '🎉 Kích hoạt thành công! Đang kết nối...';
+        this.connect();
+        return true;
+      }
+
+      this.setStatus('⚠️ Server chưa cấp mã OTP', false);
+      this.currentMsgBar.innerText = '⚠️ Server chưa cấp mã OTP cho thiết bị này. Bấm 🔄 để thử lại.';
       return false;
     }
 
