@@ -210,6 +210,7 @@ class LilyPWA {
     this.statusDot = document.getElementById('status-dot');
     this.statusText = document.getElementById('status-text');
     this.chatContainer = document.getElementById('chat-container');
+    this.chatWrapper = document.querySelector('.chat-wrapper') || document.getElementById('chat-container');
     this.currentMsgBar = document.getElementById('current-msg-bar');
     this.textInput = document.getElementById('text-input');
     this.btnSend = document.getElementById('btn-send');
@@ -456,7 +457,9 @@ class LilyPWA {
       `;
     }
     this.chatContainer.appendChild(bubble);
-    this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+    if (this.chatWrapper) {
+      this.chatWrapper.scrollTo({ top: this.chatWrapper.scrollHeight, behavior: 'smooth' });
+    }
   }
 
   sendTextMessage() {
