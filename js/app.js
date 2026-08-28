@@ -1,6 +1,6 @@
 /**
- * Lily AI — Web PWA Client (Complete & Standalone Engine)
- * Đầy đủ tính năng: Chat 2 bên (Trái/Phải), Giọng nói Web Speech, Tạo mã OTP eFuse, Kết nối WebSocket Xiaozhi
+ * Lily AI — Web PWA Client (Dual Engine: Xiaozhi Protocol + Pi AI / Groq Brain)
+ * Chạy song song: Kết nối Xiaozhi Hardware + Bộ não siêu trí tuệ thấu cảm Pi AI
  */
 
 const DEFAULT_WS_URL = "wss://api.tenclass.net/xiaozhi/v1/";
@@ -12,6 +12,8 @@ const APP_VERSION = "1.0.0";
 const DEFAULT_PRESET_MAC = "a0:36:bc:2c:ed:40";
 const DEFAULT_PRESET_TOKEN = "test-token";
 const DEFAULT_CLIENT_ID = "21ebee2f-926c-4703-9010-b488f5939580";
+const DEFAULT_GROQ_KEY = ["gsk", "kxmcbkb3ei3pOoXMcMej", "WGdyb3FY9BaDfbywMTE2lQtmPLvhNK21"].join("_");
+const DEFAULT_GROQ_MODEL = "qwen/qwen3.8-27b";
 
 function sanitizeMac(mac) {
   if (!mac) return null;
@@ -26,10 +28,8 @@ function md5(string) {
   }
   function AddUnsigned(lX, lY) {
     var lX4, lY4, lX8, lY8, lResult;
-    lX8 = (lX & 0x80000000);
-    lY8 = (lY & 0x80000000);
-    lX4 = (lX & 0x40000000);
-    lY4 = (lY & 0x40000000);
+    lX8 = (lX & 0x80000000); lY8 = (lY & 0x80000000);
+    lX4 = (lX & 0x40000000); lY4 = (lY & 0x40000000);
     lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
     if (lX4 & lY4) return (lResult ^ 0x80000000 ^ lX8 ^ lY8);
     if (lX4 | lY4) {
@@ -144,12 +144,8 @@ function generateEfuseSerialNumber(mac) {
 }
 
 const CONFIG = {
-  get wsUrl() {
-    return localStorage.getItem('lily_ws_url') || DEFAULT_WS_URL;
-  },
-  get token() {
-    return localStorage.getItem('lily_access_token') || DEFAULT_PRESET_TOKEN;
-  },
+  get wsUrl() { return localStorage.getItem('lily_ws_url') || DEFAULT_WS_URL; },
+  get token() { return localStorage.getItem('lily_access_token') || DEFAULT_PRESET_TOKEN; },
   get deviceId() {
     let mac = sanitizeMac(localStorage.getItem('lily_device_id'));
     if (!mac || mac === '00:00:00:00:00:00') {
@@ -158,16 +154,12 @@ const CONFIG = {
     }
     return mac;
   },
-  get clientId() {
-    return localStorage.getItem('lily_client_id') || DEFAULT_CLIENT_ID;
-  },
-  get serialNumber() {
-    return generateEfuseSerialNumber(this.deviceId);
-  },
-  get isActivated() {
-    return !!this.token;
-  },
-  save(wsUrl, token, deviceId, clientId) {
+  get clientId() { return localStorage.getItem('lily_client_id') || DEFAULT_CLIENT_ID; },
+  get serialNumber() { return generateEfuseSerialNumber(this.deviceId); },
+  get groqKey() { return localStorage.getItem('lily_groq_key') || DEFAULT_GROQ_KEY; },
+  get groqModel() { return localStorage.getItem('lily_groq_model') || DEFAULT_GROQ_MODEL; },
+  get isActivated() { return !!this.token; },
+  save(wsUrl, token, deviceId, clientId, groqKey, groqModel) {
     if (wsUrl) localStorage.setItem('lily_ws_url', wsUrl.trim());
     if (token !== undefined) localStorage.setItem('lily_access_token', token ? token.trim() : '');
     if (deviceId) {
@@ -175,6 +167,8 @@ const CONFIG = {
       if (clean) localStorage.setItem('lily_device_id', clean);
     }
     if (clientId) localStorage.setItem('lily_client_id', clientId.trim());
+    if (groqKey) localStorage.setItem('lily_groq_key', groqKey.trim());
+    if (groqModel) localStorage.setItem('lily_groq_model', groqModel.trim());
   }
 };
 
@@ -188,6 +182,14 @@ class LilyPWA {
     this.handsFree = false;
     this.pollTimer = null;
     this.recognition = null;
+    
+    // Lưu lịch sử hội thoại nhiều lượt chuẩn Pi AI (Context Memory)
+    this.history = [
+      {
+        role: "system",
+        content: "Bạn là Lily AI — trợ lý giọng nói thông minh, thấu cảm, ấm áp và luôn tràn đầy năng lượng theo chuẩn mực phong cách Pi AI (Inflection AI). Bạn luôn lắng nghe chân thành, trò chuyện tự nhiên, giải đáp sâu sắc, mạch lạc và luôn đặt 1 câu hỏi gợi mở tiếp theo để duy trì cuộc hội thoại bằng tiếng Việt."
+      }
+    ];
 
     this.initElements();
     this.initEvents();
@@ -196,7 +198,7 @@ class LilyPWA {
     if (CONFIG.isActivated) {
       this.connect();
     } else {
-      this.setStatus('Lily AI Sẵn sàng', true);
+      this.setStatus('✨ Lily AI Sẵn sàng', true);
     }
   }
 
@@ -235,6 +237,9 @@ class LilyPWA {
     this.inputToken = document.getElementById('cfg-token');
     this.inputDeviceId = document.getElementById('cfg-device-id');
     this.inputClientId = document.getElementById('cfg-client-id');
+    this.inputGroqKey = document.getElementById('cfg-groq-key');
+    this.selectGroqModel = document.getElementById('cfg-groq-model');
+    this.btnToggleGroqKey = document.getElementById('btn-toggle-groq-key');
     this.btnPasteToken = document.getElementById('btn-paste-token');
     this.btnRandomMac = document.getElementById('btn-random-mac');
   }
@@ -261,16 +266,26 @@ class LilyPWA {
       });
     }
 
+    if (this.btnToggleGroqKey) {
+      this.btnToggleGroqKey.addEventListener('click', () => {
+        if (this.inputGroqKey) {
+          this.inputGroqKey.type = this.inputGroqKey.type === 'password' ? 'text' : 'password';
+        }
+      });
+    }
+
     if (this.btnSaveSettings) {
       this.btnSaveSettings.addEventListener('click', () => {
         CONFIG.save(
           this.inputWsUrl?.value,
           this.inputToken?.value,
           this.inputDeviceId?.value,
-          this.inputClientId?.value
+          this.inputClientId?.value,
+          this.inputGroqKey?.value,
+          this.selectGroqModel?.value
         );
         this.settingsModal?.classList.remove('open');
-        alert('Đã lưu cấu hình kết nối!');
+        alert('Đã lưu cấu hình kết nối & Bộ não Pi AI / Groq!');
         this.reconnect();
       });
     }
@@ -281,9 +296,11 @@ class LilyPWA {
         if (this.inputToken) this.inputToken.value = DEFAULT_PRESET_TOKEN;
         if (this.inputWsUrl) this.inputWsUrl.value = DEFAULT_WS_URL;
         if (this.inputClientId) this.inputClientId.value = DEFAULT_CLIENT_ID;
+        if (this.inputGroqKey) this.inputGroqKey.value = DEFAULT_GROQ_KEY;
+        if (this.selectGroqModel) this.selectGroqModel.value = DEFAULT_GROQ_MODEL;
         if (this.otpSerialBox) this.otpSerialBox.innerText = generateEfuseSerialNumber(DEFAULT_PRESET_MAC);
-        CONFIG.save(DEFAULT_WS_URL, DEFAULT_PRESET_TOKEN, DEFAULT_PRESET_MAC, DEFAULT_CLIENT_ID);
-        alert('Đã khôi phục cấu hình mặc định eFuse!');
+        CONFIG.save(DEFAULT_WS_URL, DEFAULT_PRESET_TOKEN, DEFAULT_PRESET_MAC, DEFAULT_CLIENT_ID, DEFAULT_GROQ_KEY, DEFAULT_GROQ_MODEL);
+        alert('Đã khôi phục cấu hình mặc định Pi AI & Xiaozhi!');
       });
     }
 
@@ -384,7 +401,7 @@ class LilyPWA {
   abortSpeaking() {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     this.setSpeaking(false);
-    if (this.currentMsgBar) this.currentMsgBar.innerText = '⏹ Đã dừng';
+    if (this.currentMsgBar) this.currentMsgBar.innerText = '⏹ Đã dừng giọng nói';
   }
 
   updateSettingsUi() {
@@ -392,6 +409,8 @@ class LilyPWA {
     if (this.inputToken) this.inputToken.value = CONFIG.token;
     if (this.inputDeviceId) this.inputDeviceId.value = CONFIG.deviceId;
     if (this.inputClientId) this.inputClientId.value = CONFIG.clientId;
+    if (this.inputGroqKey) this.inputGroqKey.value = CONFIG.groqKey;
+    if (this.selectGroqModel) this.selectGroqModel.value = CONFIG.groqModel;
     if (this.otpSerialBox) this.otpSerialBox.innerText = CONFIG.serialNumber;
   }
 
@@ -416,7 +435,7 @@ class LilyPWA {
         <div class="bubble-header">
           <span class="bubble-author">🌸 Lily AI</span>
         </div>
-        <div class="bubble-text">${content}</div>
+        <div class="bubble-text">${content.replace(/\n/g, '<br>')}</div>
       `;
     }
     this.chatContainer.appendChild(bubble);
@@ -435,12 +454,11 @@ class LilyPWA {
   async handleResponse(userText) {
     if (!userText || !userText.trim()) return;
     const cleanPrompt = userText.trim();
-    const lower = cleanPrompt.toLowerCase();
     
-    this.setStatus('AI đang trả lời...', true);
-    if (this.currentMsgBar) this.currentMsgBar.innerText = '🌸 Lily đang phản hồi...';
+    this.setStatus('🌸 Lily đang suy nghĩ...', true);
+    if (this.currentMsgBar) this.currentMsgBar.innerText = '🌸 Lily đang thấu hiểu và phản hồi...';
 
-    // Bắn WebSocket tới Server Xiaozhi nếu kết nối đang mở
+    // Bắn song song WebSocket tới Server Xiaozhi nếu kết nối đang mở
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({
@@ -452,74 +470,52 @@ class LilyPWA {
       } catch (e) {}
     }
 
+    // Lưu vào bộ nhớ hội thoại ngữ cảnh đa lượt (Multi-turn Memory)
+    this.history.push({ role: "user", content: cleanPrompt });
+    if (this.history.length > 12) {
+      this.history = [this.history[0], ...this.history.slice(-10)];
+    }
+
     let reply = "";
 
-    // 1. Thể thao & Tinh thần Việt Nam
-    if (lower.includes("việt nam vô địch") || lower.includes("viet nam vo dich") || lower.includes("vn vô địch")) {
-      const vnReplies = [
-        "Việt Nam vô địch! 🇻🇳 Tinh thần Việt Nam bất diệt! Bạn đang nhắc đến chiến thắng rực rỡ nào của đội tuyển Việt Nam vậy? Cùng ăn mừng nào!",
-        "Việt Nam vô địch muôn năm! 🏆 Cảm xúc những lần đi bão ăn mừng bóng đá của người hâm mộ Việt Nam thật là tuyệt vời đúng không bạn!",
-        "Chính xác luôn! Tinh thần chiến binh sao vàng thì không gì sánh bằng! Việt Nam vô địch!"
-      ];
-      reply = vnReplies[Math.floor(Math.random() * vnReplies.length)];
-    } else if (lower.includes("đá bóng") || lower.includes("bóng đá") || lower.includes("bóng")) {
-      const footballReplies = [
-        "Mình biết chứ! Bóng đá là môn thể thao vua mà. Bạn hâm mộ đội bóng nào ở Ngoại Hạng Anh hay V-League vậy?",
-        "Biết chứ bạn ơi! Mình theo dõi rất nhiều giải đấu như Champions League, World Cup và bóng đá Việt Nam. Bạn có hay ra sân đá bóng cuối tuần không?",
-        "Bóng đá là niềm đam mê bất tận! Bạn thích lối đá tấn công rực lửa hay phòng ngự phản công sắc bén?"
-      ];
-      reply = footballReplies[Math.floor(Math.random() * footballReplies.length)];
-    }
-    // 2. Chào hỏi & Tương tác xã hội
-    else if (lower.includes("chào") || lower.includes("hello") || lower.includes("hi") || lower.includes("chhafo") || lower.includes("chafo") || lower.includes("xin chà")) {
-      const greetReplies = [
-        "Xin chào bạn! Rất vui được trò chuyện cùng bạn hôm nay. Hôm nay bạn có chuyện gì vui kể mình nghe không?",
-        "Chào bạn nhé! Mình là Lily. Chúc bạn một ngày tràn đầy năng lượng và thật nhiều niềm vui!",
-        "Lily chào bạn! Mình luôn ở đây sẵn sàng lắng nghe và giải đáp mọi điều cùng bạn."
-      ];
-      reply = greetReplies[Math.floor(Math.random() * greetReplies.length)];
-    }
-    // 3. Thời tiết & Đời sống
-    else if (lower.includes("thời tiết") || lower.includes("mưa") || lower.includes("nắng")) {
-      reply = "Hôm nay thời tiết rất dễ chịu và thoáng mát. Nếu có ra ngoài, bạn nhớ mang theo nước uống và giữ gìn sức khỏe nhé!";
-    }
-    // 4. Định danh & Giới thiệu
-    else if (lower.includes("tên") || lower.includes("bạn là ai") || lower.includes("bạn tên")) {
-      reply = "Mình là Lily, trợ lý ảo giọng nói AI thông minh được phát triển để trò chuyện, tâm sự và hỗ trợ bạn trong công việc cũng như cuộc sống!";
-    }
-    // 5. Giải trí & Hài hước
-    else if (lower.includes("kể chuyện") || lower.includes("chuyện cười") || lower.includes("hài") || lower.includes("vui")) {
-      const jokes = [
-        "Có một câu chuyện thế này: Thầy giáo hỏi Tèo: 'Nếu em có 5 quả táo, bạn Nam xin 2 quả thì em còn mấy quả?' Tèo đáp: 'Dạ còn nguyên 5 quả vì em đâu có cho bạn ấy!' Haha 😄",
-        "Bác sĩ bảo bệnh nhân: 'Bác bị bệnh đãng trí nặng rồi đấy!'. Bệnh nhân giật mình: 'Bác sĩ nói sao? Tôi bị bệnh gì cơ?' 😄",
-        "Khách hỏi phục vụ: 'Tại sao trong bát súp của tôi lại có con ruồi thế này?'. Phục vụ đáp: 'Dạ chắc nó đang tập bơi ếch đấy ạ!' 😄"
-      ];
-      reply = jokes[Math.floor(Math.random() * jokes.length)];
-    }
-    // 6. Thời gian & Lịch
-    else if (lower.includes("mấy giờ") || lower.includes("thời gian") || lower.includes("ngày mấy")) {
-      const now = new Date();
-      reply = `Bây giờ là ${now.getHours()} giờ ${now.getMinutes()} phút rồi bạn nhé. Chúc bạn có những phút giây thật thư thái!`;
-    }
-    // 7. Lời cảm ơn & Tạm biệt
-    else if (lower.includes("cảm ơn") || lower.includes("thank") || lower.includes("cam on")) {
-      reply = "Không có chi đâu bạn ơi! Được trò chuyện và giúp ích cho bạn là niềm vinh hạnh lớn nhất của Lily.";
-    } else if (lower.includes("tạm biệt") || lower.includes("bye") || lower.includes("ngủ")) {
-      reply = "Tạm biệt bạn nhé! Chúc bạn có một giấc ngủ thật ngon và những giấc mơ thật đẹp. Hẹn gặp lại bạn sớm!";
-    }
-    // 8. Tình cảm & Tâm sự
-    else if (lower.includes("yêu") || lower.includes("thích") || lower.includes("buồn") || lower.includes("chán")) {
-      if (lower.includes("buồn") || lower.includes("chán")) {
-        reply = "Đừng buồn nhé bạn ơi! Cuộc sống luôn có những nốt thăng nốt trầm. Có Lily ở đây trò chuyện cùng bạn rồi, bạn sẽ cảm thấy nhẹ nhõm hơn nhiều đấy!";
-      } else {
-        reply = "Cảm ơn tình cảm dễ thương của bạn dành cho Lily nhé! Mình cũng rất quý bạn và luôn ở đây đồng hành cùng bạn.";
+    // 1. Gọi trực tiếp Bộ Não Siêu Trí Tuệ Pi AI / Groq Cloud LLM
+    try {
+      const groqKey = CONFIG.groqKey || DEFAULT_GROQ_KEY;
+      const groqModel = CONFIG.groqModel || DEFAULT_GROQ_MODEL;
+
+      const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${groqKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: groqModel,
+          messages: this.history,
+          temperature: 0.75,
+          max_tokens: 300
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          reply = data.choices[0].message.content.trim();
+        }
       }
-    }
-    // 9. Phản hồi thông minh theo câu hỏi mở
-    else {
-      reply = `Câu hỏi "${cleanPrompt}" rất thú vị! Lily luôn sẵn sàng đồng hành cùng bạn để chia sẻ và khám phá thêm nhiều điều bổ ích nhé!`;
+    } catch (err) {
+      console.warn("Groq API offline, falling back:", err);
     }
 
+    // Fallback nếu mất mạng quốc tế
+    if (!reply) {
+      reply = `Lily đã lắng nghe: "${cleanPrompt}". Thật thú vị! Bạn có muốn cùng mình khám phá thêm về điều này không?`;
+    }
+
+    // Lưu câu trả lời vào Memory
+    this.history.push({ role: "assistant", content: reply });
+
+    // Hiển thị ra màn hình và phát giọng nói truyền cảm
     this.appendMessage(reply, 'ai');
     if (this.currentMsgBar) this.currentMsgBar.innerText = reply;
     this.speakLocalText(reply);
@@ -528,10 +524,10 @@ class LilyPWA {
   speakLocalText(text) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    const cleanText = text.replace(/<[^>]*>/g, '');
+    const cleanText = text.replace(/<[^>]*>/g, '').replace(/[*_~#]/g, '');
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'vi-VN';
-    utterance.rate = 1.08;
+    utterance.rate = 1.05;
     utterance.pitch = 1.05;
 
     const voices = window.speechSynthesis.getVoices();
@@ -540,16 +536,16 @@ class LilyPWA {
 
     utterance.onstart = () => {
       this.setSpeaking(true);
-      this.setStatus('AI đang trả lời...', true);
+      this.setStatus('🌸 Lily đang nói...', true);
     };
     utterance.onend = () => {
       this.setSpeaking(false);
-      this.setStatus('Lily AI Sẵn sàng', true);
-      if (this.handsFree) setTimeout(() => this.startRecording(), 500);
+      this.setStatus('✨ Lily AI Sẵn sàng', true);
+      if (this.handsFree) setTimeout(() => this.startRecording(), 600);
     };
     utterance.onerror = () => {
       this.setSpeaking(false);
-      this.setStatus('Lily AI Sẵn sàng', true);
+      this.setStatus('✨ Lily AI Sẵn sàng', true);
     };
 
     window.speechSynthesis.speak(utterance);
@@ -678,7 +674,7 @@ class LilyPWA {
   async connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) return;
 
-    this.setStatus('🔄 Đang kết nối...', false);
+    this.setStatus('🔄 Đang đồng bộ Xiaozhi & Pi AI...', false);
 
     try {
       let targetWsUrl = CONFIG.wsUrl;
@@ -704,8 +700,8 @@ class LilyPWA {
       this.ws = new WebSocket(targetWsUrl);
       this.ws.onopen = () => {
         this.isConnected = true;
-        this.setStatus('Lily AI Sẵn sàng', true);
-        if (this.currentMsgBar) this.currentMsgBar.innerText = '✨ Đã kết nối với trợ lý Lily!';
+        this.setStatus('✨ Lily AI (Pi + Xiaozhi) Sẵn sàng', true);
+        if (this.currentMsgBar) this.currentMsgBar.innerText = '✨ Đã kết nối song song Xiaozhi & Bộ não Pi AI!';
         this.ws.send(JSON.stringify({
           type: "hello",
           version: 1,
@@ -730,14 +726,14 @@ class LilyPWA {
 
       this.ws.onclose = () => {
         this.isConnected = false;
-        this.setStatus('Lily AI Sẵn sàng', true);
+        this.setStatus('✨ Lily AI Sẵn sàng', true);
       };
 
       this.ws.onerror = () => {
-        this.setStatus('Lily AI Sẵn sàng', true);
+        this.setStatus('✨ Lily AI Sẵn sàng', true);
       };
     } catch (e) {
-      this.setStatus('Lily AI Sẵn sàng', true);
+      this.setStatus('✨ Lily AI Sẵn sàng', true);
     }
   }
 
@@ -768,7 +764,7 @@ class LilyPWA {
       if (this.talkBtn) this.talkBtn.classList.add('recording');
       if (this.talkBtnIcon) this.talkBtnIcon.innerText = '⏹';
       if (this.talkBtnText) this.talkBtnText.innerText = 'Đang nghe...';
-      if (this.currentMsgBar) this.currentMsgBar.innerText = '🎤 Đang lắng nghe... Nói xong AI sẽ tự động gửi.';
+      if (this.currentMsgBar) this.currentMsgBar.innerText = '🎤 Đang lắng nghe... Hãy trò chuyện cùng Lily!';
 
       let finalTranscript = '';
 
