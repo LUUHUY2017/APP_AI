@@ -108,17 +108,7 @@ public class DeviceActivationService
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;
 
-            if (root.TryGetProperty("token", out var tokenProp))
-            {
-                result.IsActivated = true;
-                result.Token = tokenProp.GetString();
-                if (root.TryGetProperty("websocket_url", out var wsProp))
-                {
-                    result.WebSocketUrl = wsProp.GetString();
-                }
-                return result;
-            }
-
+            // 1. Kiểm tra nếu có mã OTP yêu cầu kích hoạt (activation.code)
             if (root.TryGetProperty("activation", out var actElem))
             {
                 result.IsActivated = false;
@@ -138,6 +128,33 @@ public class DeviceActivationService
                     result.QrUrl = $"https://xiaozhi.me/active?code={result.Code}";
                     return result;
                 }
+            }
+
+            // 2. Trích xuất Token và WebSocket URL từ top-level hoặc lồng trong đối tượng 'websocket'
+            string? token = null;
+            string? wsUrl = null;
+
+            if (root.TryGetProperty("websocket", out var wsElem))
+            {
+                if (wsElem.TryGetProperty("token", out var wsTokenProp)) token = wsTokenProp.GetString();
+                if (wsElem.TryGetProperty("url", out var wsUrlProp)) wsUrl = wsUrlProp.GetString();
+            }
+
+            if (string.IsNullOrEmpty(token) && root.TryGetProperty("token", out var topTokenProp))
+            {
+                token = topTokenProp.GetString();
+            }
+            if (string.IsNullOrEmpty(wsUrl) && root.TryGetProperty("websocket_url", out var topWsProp))
+            {
+                wsUrl = topWsProp.GetString();
+            }
+
+            if (!string.IsNullOrEmpty(token))
+            {
+                result.IsActivated = true;
+                result.Token = token;
+                result.WebSocketUrl = wsUrl ?? "wss://api.tenclass.net/xiaozhi/v1/";
+                return result;
             }
 
             result.Message = $"Server phản hồi: {responseBody}";
