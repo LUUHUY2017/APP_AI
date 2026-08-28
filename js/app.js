@@ -614,16 +614,16 @@ ${text}
     try {
       this.recognition = new SpeechRecognition();
       this.recognition.lang = 'vi-VN';
-      this.recognition.interimResults = true; // Hiện chữ tức thì thời gian thực (Realtime STT)
+      this.recognition.interimResults = true;
       this.recognition.continuous = false;
       this.recognition.maxAlternatives = 1;
 
       this.isRecording = true;
+      this.setStatus('🎤 Đang nghe...', true);
       this.talkBtn.classList.add('recording');
       this.talkBtnIcon.innerText = '⏹';
       this.talkBtnText.innerText = 'Đang nghe...';
-      this.avatarRing.classList.add('pulsing');
-      this.currentMsgBar.innerText = '🎤 Đang lắng nghe giọng nói...';
+      this.currentMsgBar.innerText = '🎤 Đang lắng nghe... Nói xong AI sẽ tự động gửi.';
 
       let finalTranscript = '';
 
@@ -642,17 +642,17 @@ ${text}
         if (finalTranscript) {
           const spokenText = finalTranscript.trim();
           this.appendMessage(spokenText, 'user');
-          this.currentMsgBar.innerText = `Bạn nói: "${spokenText}"`;
+          this.stopRecording();
           this.handleResponse(spokenText);
         }
       };
 
       this.recognition.onend = () => {
-        this.stopRecording();
+        if (this.isRecording) this.stopRecording();
       };
 
       this.recognition.onerror = () => {
-        this.stopRecording();
+        if (this.isRecording) this.stopRecording();
       };
 
       this.recognition.start();
@@ -666,7 +666,6 @@ ${text}
     this.talkBtn.classList.remove('recording');
     this.talkBtnIcon.innerText = '🎤';
     this.talkBtnText.innerText = 'Bấm để nói';
-    this.avatarRing.classList.remove('pulsing');
     if (this.recognition) {
       try { this.recognition.stop(); } catch (e) {}
       this.recognition = null;
@@ -684,8 +683,10 @@ ${text}
   async handleResponse(userText) {
     if (!userText || !userText.trim()) return;
     const cleanPrompt = userText.trim();
-    this.setSpeaking(true);
-    this.currentMsgBar.innerText = '🌸 Lily đang suy nghĩ câu trả lời...';
+    
+    // Trạng thái: Đang xử lý (giống .NET 10)
+    this.setStatus('🧠 Đang xử lý...', true);
+    this.currentMsgBar.innerText = '⏳ Đang xử lý câu trả lời...';
 
     // 1. Gửi qua WebSocket tới Server Xiaozhi nếu đang mở
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -771,12 +772,21 @@ ${text}
     const viVoice = voices.find(v => v.lang.includes('vi') || v.lang.includes('VN'));
     if (viVoice) utterance.voice = viVoice;
 
-    utterance.onstart = () => this.setSpeaking(true);
+    utterance.onstart = () => {
+      this.setSpeaking(true);
+      this.setStatus('AI đang trả lời...', true);
+    };
     utterance.onend = () => {
       this.setSpeaking(false);
-      if (this.handsFree) setTimeout(() => this.startRecording(), 600);
+      this.setStatus('Lily AI Sẵn sàng', true);
+      if (this.handsFree) {
+        setTimeout(() => this.startRecording(), 500);
+      }
     };
-    utterance.onerror = () => this.setSpeaking(false);
+    utterance.onerror = () => {
+      this.setSpeaking(false);
+      this.setStatus('Lily AI Sẵn sàng', true);
+    };
 
     window.speechSynthesis.speak(utterance);
   }
