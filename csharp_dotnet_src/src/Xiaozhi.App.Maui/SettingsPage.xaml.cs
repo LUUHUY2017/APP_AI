@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Storage;
+using Xiaozhi.Core.Models;
 using Xiaozhi.Core.Utils;
 using Xiaozhi.Protocols.Ota;
 
