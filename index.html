@@ -3,105 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lily AI — Trợ Lý Giọng Nói Thông Minh</title>
+  <title>Lily - AI Assistant (.NET 10 Web)</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0a0814">
+  <meta name="theme-color" content="#121024">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=2.0">
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=3.0">
 </head>
 <body>
-  <!-- Ambient Cosmic Glow Backgrounds -->
-  <div class="ambient-glow glow-top"></div>
-  <div class="ambient-glow glow-bottom"></div>
+  <div id="app-window">
+    <!-- Window Titlebar (Desktop .NET 10 Style) -->
+    <div class="window-titlebar">
+      <div class="titlebar-left">
+        <span class="app-icon">🌸</span>
+        <span class="window-title">Lily - AI Assistant (.NET 10)</span>
+      </div>
+      <div class="titlebar-controls">
+        <span class="win-btn">—</span>
+        <span class="win-btn">▢</span>
+        <span class="win-btn close">✕</span>
+      </div>
+    </div>
 
-  <div id="app-container">
-    <!-- Top Header -->
+    <!-- App Header -->
     <header class="app-header">
-      <div class="brand">
-        <div class="brand-avatar-mini">
-          <span>🌸</span>
-        </div>
-        <div class="brand-info">
-          <div class="brand-title-row">
-            <h1 class="brand-name">Lily AI</h1>
-            <span class="badge-version">v1.2</span>
-          </div>
-          <div class="status-indicator">
-            <span id="status-dot" class="dot active"></span>
-            <span id="status-text">Web Voice Sẵn sàng</span>
-          </div>
-        </div>
+      <div class="header-left">
+        <span id="status-dot" class="status-dot active"></span>
+        <span id="status-speaker-icon" class="speaker-icon">🔊</span>
+        <span id="status-text" class="status-text">Lily AI Sẵn sàng</span>
       </div>
 
-      <div class="header-actions">
-        <button id="btn-hands-free" class="glass-btn-pill" title="Chế độ Rảnh tay">
-          <span class="btn-icon">🎙️</span>
-          <span class="btn-text">Rảnh tay</span>
+      <div class="header-right">
+        <button id="btn-hands-free" class="btn-pill-dark" title="Chế độ Rảnh tay">
+          <span>🎙️</span>
+          <span class="hands-free-label">Rảnh tay: Tắt</span>
         </button>
-        <button id="btn-refresh" class="glass-icon-btn" title="Tải lại kết nối">
+        <button id="btn-refresh" class="btn-square-dark" title="Tải lại kết nối">
           <span>🔄</span>
         </button>
-        <button id="btn-settings" class="glass-icon-btn" title="Cài đặt cấu hình">
+        <button id="btn-calc" class="btn-square-dark" title="Tính toán">
+          <span>🧮</span>
+        </button>
+        <button id="btn-settings" class="btn-square-dark" title="Cài đặt cấu hình">
           <span>⚙️</span>
         </button>
       </div>
     </header>
 
-    <!-- Main Chat & AI Visualizer Area -->
-    <main class="chat-wrapper">
-      <!-- AI Interactive Orb / Voice Visualizer -->
-      <div class="ai-hero-visualizer">
-        <div class="orb-outer" id="avatar-ring">
-          <div class="orb-wave wave-1"></div>
-          <div class="orb-wave wave-2"></div>
-          <div class="orb-core">
-            <span class="orb-emoji" id="avatar-emoji">🌸</span>
-          </div>
-        </div>
-        <div id="current-msg-bar" class="live-subtitle">
-          ✨ Sẵn sàng trò chuyện cùng bạn
-        </div>
-      </div>
-
-      <!-- Chat Bubble Stream -->
-      <div id="chat-container" class="chat-container">
-        <div class="chat-bubble ai welcome-msg">
-          <div class="bubble-header">
-            <span class="bubble-author">🌸 Lily AI</span>
-            <span class="bubble-time">Vừa xong</span>
-          </div>
-          <div class="bubble-content">
-            Xin chào! Mình là <strong>Lily</strong> — Trợ lý ảo giọng nói AI. Bấm nút <span class="highlight-pill">🎤 Bấm để nói</span> bên dưới hoặc gõ câu hỏi để trò chuyện cùng mình nhé!
+    <!-- Main Chat Area -->
+    <main class="chat-viewport">
+      <div id="chat-container" class="chat-messages-list">
+        <div class="chat-row ai">
+          <div class="ai-card">
+            <div class="ai-author"><span class="flower-icon">🌸</span> Lily</div>
+            <div class="ai-text">Xin chào! Mình là Lily, trợ lý AI giọng nói thông minh. Bấm nút <strong>🎤 Bấm để nói</strong> bên dưới để trò chuyện cùng mình nhé!</div>
           </div>
         </div>
       </div>
     </main>
 
-    <!-- Bottom Control Deck -->
-    <footer class="app-footer">
-      <!-- Voice Action Center -->
-      <div class="voice-hero-action">
-        <div class="talk-hint-badge" id="talk-hint">👇 Chạm để nói chuyện với Lily</div>
-        <button id="talk-btn" class="main-talk-btn">
-          <div class="mic-glow"></div>
-          <span id="talk-btn-icon" class="mic-icon">🎤</span>
-          <span id="talk-btn-text" class="mic-text">Bấm để nói</span>
-        </button>
+    <!-- Live Subtitle Display (Exactly matching .NET 10) -->
+    <div class="subtitle-wrapper">
+      <div id="current-msg-bar" class="subtitle-text">
+        ✨ Sẵn sàng trò chuyện cùng bạn
       </div>
+    </div>
 
-      <!-- Text Query Bar -->
-      <div class="dock-input-bar">
-        <div class="input-inner-glass">
-          <input type="text" id="text-input" placeholder="Nhập câu hỏi hoặc yêu cầu..." autocomplete="off">
-          <button id="btn-send" class="btn-send-glass" title="Gửi tin nhắn">
-            <span>➤</span>
-          </button>
-        </div>
+    <!-- Text Input Bar -->
+    <div class="input-section">
+      <div class="input-group">
+        <input type="text" id="text-input" placeholder="Gõ câu hỏi vào đây..." autocomplete="off">
+        <button id="btn-send" class="btn-send-purple">Gửi</button>
+      </div>
+    </div>
+
+    <!-- Bottom Voice Control Dock -->
+    <footer class="app-footer">
+      <div class="talk-hint-label" id="talk-hint">👇 Bấm để nói (nói xong tự gửi)</div>
+      
+      <div class="footer-buttons-row">
+        <button id="btn-chat-toggle" class="btn-circle-dark" title="Bật/Tắt chat">
+          <span class="icon-chat">💬</span>
+        </button>
+        
+        <button id="talk-btn" class="btn-talk-purple">
+          <span id="talk-btn-icon">🎤</span>
+          <span id="talk-btn-text">Bấm để nói</span>
+        </button>
+
+        <button id="btn-abort" class="btn-stop-dark" title="Dừng phát giọng nói">
+          <span>⏹ Dừng</span>
+        </button>
       </div>
     </footer>
 
@@ -196,6 +192,6 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=2.0"></script>
+  <script src="js/app.js?v=3.0"></script>
 </body>
 </html>

@@ -373,14 +373,23 @@ class LilyPWA {
   }
 
   appendMessage(content, role = 'user') {
-    const bubble = document.createElement('div');
-    bubble.className = `chat-bubble ${role}`;
-    if (role === 'ai') {
-      bubble.innerHTML = `<span class="author">🌸 Lily</span>${content}`;
+    if (role === 'user') {
+      const row = document.createElement('div');
+      row.className = 'chat-row user';
+      row.innerHTML = `<div class="user-bubble">${content}</div>`;
+      this.chatContainer.appendChild(row);
     } else {
-      bubble.innerText = content;
+      const isEmoji = /^(\p{Emoji}|[\u{1F300}-\u{1F9FF}])$/u.test(content.trim());
+      const row = document.createElement('div');
+      row.className = 'chat-row ai';
+      row.innerHTML = `
+        <div class="ai-card">
+          <div class="ai-author"><span class="flower-icon">🌸</span> Lily</div>
+          <div class="ai-text ${isEmoji ? 'emoji-only' : ''}">${content}</div>
+        </div>
+      `;
+      this.chatContainer.appendChild(row);
     }
-    this.chatContainer.appendChild(bubble);
     this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
   }
 
@@ -705,7 +714,22 @@ ${text}
         let aiReply = await res.text();
         aiReply = aiReply.trim().replace(/^"|"$/g, '');
         if (aiReply && aiReply.length > 2) {
-          this.appendMessage(aiReply, 'ai');
+          // Tách câu để hiển thị từng thẻ bong bóng riêng biệt như bản .NET 10
+          const sentences = aiReply.split(/(?<=[.?!\n])\s+/).filter(s => s.trim().length > 0);
+          
+          if (sentences.length > 1) {
+            // Thêm emote vui vẻ mở đầu
+            this.appendMessage("😄", 'ai');
+            for (let i = 0; i < sentences.length; i++) {
+              const s = sentences[i].trim();
+              if (s) {
+                this.appendMessage(s, 'ai');
+              }
+            }
+          } else {
+            this.appendMessage(aiReply, 'ai');
+          }
+          
           this.currentMsgBar.innerText = aiReply;
           this.speakLocalText(aiReply);
           return;
