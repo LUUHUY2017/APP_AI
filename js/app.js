@@ -388,9 +388,16 @@ class LilyPWA {
   // LUỒNG TẠO MÃ OTP VÀ KÍCH HOẠT XIAOZHI.ME (MATCHING .EXE)
   // ==========================================================================
   async generateOtp() {
-    const mac = this.inputDeviceId.value.trim() || CONFIG.deviceId;
+    // Nếu MAC đang là MAC mẫu test (cc:30:80:20:64:7c), tự động tạo MAC mới để Server cấp mã OTP 6 số mới
+    let mac = this.inputDeviceId.value.trim() || CONFIG.deviceId;
+    if (mac === DEFAULT_PRESET_MAC) {
+      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+      mac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
+      this.inputDeviceId.value = mac;
+    }
     const clientId = this.inputClientId.value.trim() || CONFIG.clientId;
     const serial = generateEfuseSerialNumber(mac);
+    this.otpSerialBox.innerText = serial;
 
     this.otpStatusText.innerText = '⏳ Đang gửi yêu cầu tạo mã OTP tới máy chủ Xiaozhi...';
     this.btnGetOtp.disabled = true;
@@ -454,13 +461,12 @@ ${text}
         return;
       }
 
-      // 2. Nếu đã có token trả về trực tiếp
+      // 2. Nếu server trả về token trực tiếp mà không có mã OTP
       const directToken = data.token || (data.websocket && data.websocket.token);
       if (directToken) {
         this.inputToken.value = directToken;
         CONFIG.save(CONFIG.wsUrl, directToken, mac, clientId);
-        this.otpStatusText.innerText = `✅ Thiết bị đã kích hoạt sẵn token (${directToken})!`;
-        alert('Thiết bị đã có token hợp lệ!');
+        this.otpStatusText.innerText = `✅ Thiết bị đã có Token hợp lệ (${directToken})!`;
       }
     } catch (err) {
       logText += `❌ Lỗi: ${err.message}
