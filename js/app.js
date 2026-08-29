@@ -8,7 +8,8 @@ const OTA_URL = "https://api.tenclass.net/xiaozhi/ota/";
 const BOARD_TYPE = "esp32s3";
 const APP_NAME = "xiaozhi";
 const APP_VERSION = "1.0.0";
-const ACTIVATION_VERSION = "2";
+// Browser clients have no factory-programmed eFuse serial/HMAC key.
+const ACTIVATION_VERSION = "1";
 
 const DEFAULT_PRESET_MAC = "38:60:77:dc:90:11";
 const DEFAULT_PRESET_TOKEN = "test-token";
@@ -629,6 +630,13 @@ class LilyPWA {
 
   async generateOtp() {
     let mac = this.inputDeviceId?.value?.trim() || CONFIG.deviceId;
+    // The bundled MAC is shared by every installation and may already have a
+    // stale v2 registration. Replace it once, then persist the new identity.
+    if (sanitizeMac(mac) === DEFAULT_PRESET_MAC) {
+      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+      mac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
+      if (this.inputDeviceId) this.inputDeviceId.value = mac;
+    }
     mac = sanitizeMac(mac);
     if (!mac) {
       if (this.otpStatusText) this.otpStatusText.innerText = '❌ MAC không hợp lệ. Hãy nhập đủ 12 ký tự hex.';
@@ -647,9 +655,8 @@ class LilyPWA {
 
     const payload = {
       application: { version: APP_VERSION, elf_sha256: clientId },
-      board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, mac_address: mac, serial_number: serial, sn: serial },
-      mac: mac,
-      serial_number: serial
+      board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, mac_address: mac },
+      mac: mac
     };
 
     const headers = {
@@ -658,8 +665,7 @@ class LilyPWA {
       'Client-Id': clientId,
       'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
       'Accept-Language': 'zh-CN',
-      'Activation-Version': ACTIVATION_VERSION,
-      'Serial-Number': serial
+      'Activation-Version': ACTIVATION_VERSION
     };
 
     let logText = `>>> [REQUEST] POST ${OTA_URL}\nHeaders:\n${JSON.stringify(headers, null, 2)}\nPayload:\n${JSON.stringify(payload, null, 2)}\n\n`;
@@ -724,14 +730,12 @@ class LilyPWA {
             'Device-Id': mac,
             'Client-Id': clientId,
             'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
-            'Activation-Version': ACTIVATION_VERSION,
-            'Serial-Number': serial
+            'Activation-Version': ACTIVATION_VERSION
           },
           body: JSON.stringify({
             application: { version: APP_VERSION, elf_sha256: clientId },
-            board: { type: BOARD_TYPE, name: APP_NAME, mac: mac, serial_number: serial },
-            mac: mac,
-            serial_number: serial
+            board: { type: BOARD_TYPE, name: APP_NAME, mac: mac },
+            mac: mac
           })
         });
         const data = await resp.json();
@@ -765,10 +769,6 @@ class LilyPWA {
       if (CONFIG.deviceId) {
         params.push(`device_id=${encodeURIComponent(CONFIG.deviceId)}`);
         params.push(`mac=${encodeURIComponent(CONFIG.deviceId)}`);
-      }
-      if (CONFIG.serialNumber) {
-        params.push(`serial_number=${encodeURIComponent(CONFIG.serialNumber)}`);
-        params.push(`sn=${encodeURIComponent(CONFIG.serialNumber)}`);
       }
       params.push(`client_id=${encodeURIComponent(CONFIG.clientId)}`);
       params.push('protocol_version=2');

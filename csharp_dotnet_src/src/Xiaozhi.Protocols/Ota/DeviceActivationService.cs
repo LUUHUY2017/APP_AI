@@ -58,8 +58,8 @@ public class DeviceActivationService
             }
             var cleanMac = rawMac;
 
-            // Sinh Serial Number chuẩn định dạng eFuse Xiaozhi và HMAC key (SHA256)
-            var serialNumber = DeviceFingerprint.GenerateSerialNumber(cleanMac);
+            // Software client: only use a deterministic firmware fingerprint.
+            // Do not claim a factory-programmed eFuse serial/HMAC identity.
             var hmacKey = DeviceFingerprint.GenerateHmacKey(cleanMac);
 
             var payload = new
@@ -75,14 +75,10 @@ public class DeviceActivationService
                     name = SystemConstants.AppName,
                     ip = GetLocalIpAddress(),
                     mac = macAddress,
-                    mac_address = macAddress,
-                    serial_number = serialNumber,
-                    sn = serialNumber
+                    mac_address = macAddress
                 },
                 mac = macAddress,
-                mac_address = macAddress,
-                serial_number = serialNumber,
-                sn = serialNumber
+                mac_address = macAddress
             };
 
             var jsonBody = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
@@ -97,10 +93,8 @@ public class DeviceActivationService
             request.Headers.Add("Accept-Language", "zh-CN");
             request.Headers.Add("Activation-Version", SystemConstants.ActivationVersion);
             request.Headers.Add("Mac-Address", macAddress);
-            request.Headers.Add("Serial-Number", serialNumber);
-            request.Headers.Add("Hmac-Key", hmacKey);
 
-            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {serialNumber}\n  Hmac-Key: {hmacKey}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.ActivationVersion}\nBody:\n{jsonBody}";
+            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.ActivationVersion}\nBody:\n{jsonBody}";
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();

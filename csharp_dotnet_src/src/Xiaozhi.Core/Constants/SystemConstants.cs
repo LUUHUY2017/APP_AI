@@ -4,7 +4,8 @@ public static class SystemConstants
 {
     public const string AppName = "py-xiaozhi";
     public const string AppVersion = "2.0.0";
-    public const string ActivationVersion = "2";
+    // iOS is a software client and has no factory-programmed eFuse identity.
+    public const string ActivationVersion = "1";
     public const string BoardType = "bread-compact-wifi";
     public const int DefaultTimeoutSeconds = 10;
     public const int ActivationMaxRetries = 60;

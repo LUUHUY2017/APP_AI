@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lily-pwa-v6-otp-fix';
+const CACHE_NAME = 'lily-pwa-v7-activation-v1';
 const ASSETS = [
   './',
   './index.html',
