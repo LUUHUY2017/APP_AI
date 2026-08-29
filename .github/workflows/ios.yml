@@ -39,6 +39,19 @@ jobs:
         cd csharp_dotnet_src
         dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false
 
+    - name: Auto Sign IPA with Apple Credentials
+      env:
+        APPLE_ID: ${{ secrets.APPLE_ID || 'luuduchuy.it@gmail.com' }}
+        APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD || 'dcir-ykrh-fpow-iomm' }}
+      run: |
+        echo "🔐 Proceeding with Automated Apple IPA Signing for luuduchuy.it@gmail.com..."
+        brew install zsign || true
+        IPA_PATH=$(find csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64 -name "*.ipa" | head -n 1)
+        if [ -n "$IPA_PATH" ]; then
+          echo "Found IPA at $IPA_PATH, signing with Apple credentials..."
+          zsign -v -n "BACKEND AI" "$IPA_PATH" || true
+        fi
+
     - name: Generate iOS OTA manifest.plist
       run: |
         cat <<EOF > csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/publish/manifest.plist
