@@ -420,6 +420,16 @@ public class XiaozhiWebSocketClient : IProtocol
                     if (OnConnected != null) await OnConnected.Invoke();
                     break;
 
+                case "error":
+                    if (root.TryGetProperty("message", out var errorMsgElem))
+                    {
+                        var errMsg = errorMsgElem.GetString();
+                        Log($"[WS RECV ERROR] {errMsg}");
+                        if (OnIncomingText != null)
+                            await OnIncomingText.Invoke($"⚠️ Server báo lỗi: {errMsg}");
+                    }
+                    break;
+
                 case "alert":
                     if (root.TryGetProperty("message", out var alertMsg) && OnIncomingText != null)
                         await OnIncomingText.Invoke($"[Thông báo]: {alertMsg.GetString()}");
