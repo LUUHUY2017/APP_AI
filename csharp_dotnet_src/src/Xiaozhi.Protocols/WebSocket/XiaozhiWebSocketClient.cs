@@ -212,7 +212,8 @@ public class XiaozhiWebSocketClient : IProtocol
         {
             SessionId = _sessionId,
             Type = "listen",
-            State = "detect",
+            State = "start",
+            Mode = "manual",
             Text = text
         };
         await SendJsonAsync(msg);

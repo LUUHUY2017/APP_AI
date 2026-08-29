@@ -64,9 +64,9 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Subtitle & Live Status -->
+        <!-- Subtitle & Live Status (Hidden to remove duplicate text clutter) -->
         <Label Grid.Row="2" x:Name="CurrentMsgLabel" Text="✨ Sẵn sàng trò chuyện cùng bạn"
-               FontSize="12" TextColor="#00F2FE" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,4,0,8" />
+               FontSize="12" TextColor="#00F2FE" FontAttributes="Bold" HorizontalOptions="Center" Margin="0,4,0,8" IsVisible="False" />
 
         <!-- Floating Vibrant Capsule Bar -->
         <Frame Grid.Row="3" BackgroundColor="#110926" CornerRadius="28" Padding="6,4"

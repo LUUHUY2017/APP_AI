@@ -77,48 +77,78 @@ public partial class MainPage : ContentPage
 
     private readonly Concentus.Structs.OpusDecoder _opusDecoder24k = new Concentus.Structs.OpusDecoder(24000, 1);
     private bool _hasReceivedServerAudio = false;
-    private readonly System.IO.MemoryStream _serverAudioPcmStream = new();
+    private readonly System.Collections.Generic.Queue<byte[]> _iosAudioChunkQueue = new();
+    private bool _isIosAudioPlaying = false;
 
     private void PlayServerAudioChunkOnIos(byte[] pcmBytes)
     {
-        lock (_serverAudioPcmStream)
+        lock (_iosAudioChunkQueue)
         {
-            _serverAudioPcmStream.Write(pcmBytes, 0, pcmBytes.Length);
+            _iosAudioChunkQueue.Enqueue(pcmBytes);
+        }
+
+        if (!_isIosAudioPlaying)
+        {
+            _isIosAudioPlaying = true;
+            _ = ProcessIosAudioQueueAsync();
+        }
+    }
+
+    private async Task ProcessIosAudioQueueAsync()
+    {
+        while (true)
+        {
+            byte[]? chunk = null;
+            lock (_iosAudioChunkQueue)
+            {
+                if (_iosAudioChunkQueue.Count > 0)
+                {
+                    chunk = _iosAudioChunkQueue.Dequeue();
+                }
+                else
+                {
+                    _isIosAudioPlaying = false;
+                    break;
+                }
+            }
+
+            if (chunk != null && chunk.Length > 0)
+            {
+                byte[] wavHeader = CreateWavHeader(chunk.Length, 24000, 1, 16);
+                byte[] fullWav = new byte[wavHeader.Length + chunk.Length];
+                Buffer.BlockCopy(wavHeader, 0, fullWav, 0, wavHeader.Length);
+                Buffer.BlockCopy(chunk, 0, fullWav, wavHeader.Length, chunk.Length);
+
+                var tcs = new TaskCompletionSource<bool>();
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    try
+                    {
+                        using var nsData = Foundation.NSData.FromArray(fullWav);
+                        var player = AVFoundation.AVAudioPlayer.FromData(nsData);
+                        if (player != null)
+                        {
+                            player.FinishedPlaying += (s, e) => tcs.TrySetResult(true);
+                            player.Play();
+                        }
+                        else
+                        {
+                            tcs.TrySetResult(true);
+                        }
+                    }
+                    catch
+                    {
+                        tcs.TrySetResult(true);
+                    }
+                });
+                await Task.WhenAny(tcs.Task, Task.Delay(250));
+            }
         }
     }
 
     private void FlushAndPlayServerAudioOnIos()
     {
-        byte[] pcmData;
-        lock (_serverAudioPcmStream)
-        {
-            pcmData = _serverAudioPcmStream.ToArray();
-            _serverAudioPcmStream.SetLength(0);
-        }
-
-        if (pcmData.Length == 0) return;
-
-        byte[] wavHeader = CreateWavHeader(pcmData.Length, 24000, 1, 16);
-        byte[] fullWav = new byte[wavHeader.Length + pcmData.Length];
-        Buffer.BlockCopy(wavHeader, 0, fullWav, 0, wavHeader.Length);
-        Buffer.BlockCopy(pcmData, 0, fullWav, wavHeader.Length, pcmData.Length);
-
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            try
-            {
-                using var nsData = Foundation.NSData.FromArray(fullWav);
-                var player = AVFoundation.AVAudioPlayer.FromData(nsData);
-                if (player != null)
-                {
-                    player.Play();
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"AVAudioPlayer Error: {ex.Message}");
-            }
-        });
+        // Luồng âm thanh real-time đã phát trực tiếp ngay khi gói Opus đầu tiên tới
     }
 
     public static byte[] CreateWavHeader(int pcmDataLength, int sampleRate = 24000, int channels = 1, int bitsPerSample = 16)
