@@ -45,7 +45,6 @@ public class OtaAutoUpdateService
             var tagName = root.TryGetProperty("tag_name", out var tagProp) ? tagProp.GetString() : "";
             var releaseNotes = root.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : "Cải tiến hiệu năng & tính năng mới.";
             
-            string downloadUrl = DEFAULT_DOWNLOAD_URL;
             string directIpaUrl = "";
             string plistUrl = "";
 
@@ -74,21 +73,9 @@ public class OtaAutoUpdateService
                 }
             }
 
-            // Ưu tiên 1: Cài đặt trực tiếp không dây trên iOS qua giao thức itms-services (Enterprise/OTA Manifest)
-            if (!string.IsNullOrEmpty(plistUrl))
-            {
-                downloadUrl = $"itms-services://?action=download-manifest&url={Uri.EscapeDataString(plistUrl)}";
-            }
-            // Ưu tiên 2: Link trực tiếp tới file .ipa (Dành cho Signer ứng dụng trên iOS như TrollStore / Scarlet / AltStore / ESign)
-            else if (!string.IsNullOrEmpty(directIpaUrl))
-            {
-                downloadUrl = directIpaUrl;
-            }
-            // Ưu tiên 3: Trang phát hành GitHub Releases
-            else if (root.TryGetProperty("html_url", out var urlProp) && !string.IsNullOrEmpty(urlProp.GetString()))
-            {
-                downloadUrl = urlProp.GetString()!;
-            }
+            string rawPlistUrl = "https://raw.githubusercontent.com/LUUHUY2017/APP_AI/main/manifest.plist";
+            string itmsUrl = $"itms-services://?action=download-manifest&url={Uri.EscapeDataString(rawPlistUrl)}";
+            string htmlReleaseUrl = root.TryGetProperty("html_url", out var urlProp) ? urlProp.GetString() ?? "https://github.com/LUUHUY2017/APP_AI/releases" : "https://github.com/LUUHUY2017/APP_AI/releases";
 
             // Clean version string (e.g. "v1.0.1" -> "1.0.1")
             var remoteVersionStr = tagName?.TrimStart('v', 'V') ?? "";
@@ -99,8 +86,8 @@ public class OtaAutoUpdateService
                 {
                     bool updateNow = await page.DisplayAlert(
                         $"🚀 Cập nhật mới (v{remoteVersionStr})",
-                        $"Đã có phiên bản mới v{remoteVersionStr}!\n\nNội dung cập nhật:\n{releaseNotes}\n\nBạn có muốn tự động tải & cập nhật ngay không?",
-                        "⚡ Cập nhật ngay",
+                        $"Đã có phiên bản mới v{remoteVersionStr}!\n\nNội dung cập nhật:\n{releaseNotes}\n\nBạn có muốn tự động tải & cài đặt ngay không?",
+                        "⚡ Cài đặt ngay",
                         "Để sau"
                     );
 
@@ -108,9 +95,21 @@ public class OtaAutoUpdateService
                     {
                         try
                         {
-                            await Launcher.Default.OpenAsync(new Uri(downloadUrl));
+                            // 1. Thử kích hoạt OTA cài đặt không dây chính thức của iOS
+                            bool success = await Launcher.Default.OpenAsync(new Uri(itmsUrl));
+                            if (!success)
+                            {
+                                await Launcher.Default.OpenAsync(new Uri(htmlReleaseUrl));
+                            }
                         }
-                        catch { }
+                        catch
+                        {
+                            try
+                            {
+                                await Launcher.Default.OpenAsync(new Uri(htmlReleaseUrl));
+                            }
+                            catch { }
+                        }
                     }
                 });
             }

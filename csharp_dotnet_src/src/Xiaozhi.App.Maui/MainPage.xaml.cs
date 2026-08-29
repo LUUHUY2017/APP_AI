@@ -557,38 +557,34 @@ public partial class MainPage : ContentPage
         _receivedResponse = false;
         _hasReceivedServerAudio = false; // Reset trạng thái âm thanh Server cho câu hỏi mới
 
+        // Check for iOS App Launcher voice commands
+        if (await TryOpenAppByVoiceCommandAsync(text)) return;
+
         try
         {
+            if (!_client.IsConnected)
+            {
+                await ConnectWithOtaAsync();
+            }
             await _client.SendTextQueryAsync(text);
         }
         catch (Exception ex)
         {
             XiaozhiWebSocketClient.Log($"OnSendClicked send error: {ex.Message}");
+            StatusLabel.Text = "⚠️ Chưa kết nối được Server";
         }
 
-        // Check for iOS App Launcher voice commands
-        if (await TryOpenAppByVoiceCommandAsync(text)) return;
-
-        // Nếu đã kết nối Server Xiaozhi, nhường 100% quyền trả lời cho Server (Model, Prompt & Voice cài trên xiaozhi.me)
-        if (_client.IsConnected) return;
-
-        // Nếu ngắt kết nối, dùng fallback dự phòng
+        // Tự động giải phóng nhãn trạng thái sau 5s nếu không nhận được phản hồi
         _ = Task.Run(async () =>
         {
             await Task.Delay(5000);
-            if (!_receivedResponse)
+            MainThread.BeginInvokeOnMainThread(() =>
             {
-                _receivedResponse = true;
-                string reply = $"Dạ AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn.";
-
-                MainThread.BeginInvokeOnMainThread(() =>
+                if (StatusLabel.Text == "🧠 Đang xử lý..." && !_receivedResponse)
                 {
                     StatusLabel.Text = "✅ Sẵn sàng";
-                    CurrentMsgLabel.Text = reply;
-                    AddChatMessage(reply, isUser: false);
-                    _ = SpeakAsync(reply);
-                });
-            }
+                }
+            });
         });
     }
 
@@ -613,6 +609,37 @@ public partial class MainPage : ContentPage
             CurrentMsgLabel.Text = safetyReply;
             AddChatMessage(safetyReply, isUser: false);
             _ = SpeakAsync(safetyReply);
+            return true;
+        }
+
+        // 🚗 WYN CAR TRAFFIC ASSISTANT COMMANDS ("Mở WYN", "Bật WYN", "Cảnh báo giao thông WYN", "Bật cảnh báo tốc độ")
+        if (lower.Contains("mở wyn") || lower.Contains("bật wyn") || lower.Contains("cảnh báo giao thông") || lower.Contains("cảnh báo tốc độ") || lower.Contains("lái xe"))
+        {
+            string reply = "Dạ, Trợ lý đang khởi chạy ứng dụng Cảnh báo giao thông WYN cho chuyến xe của bạn đây ạ! Chúc bạn thượng lộ bình an!";
+            StatusLabel.Text = "🚗 Đang khởi chạy WYN...";
+            CurrentMsgLabel.Text = reply;
+            AddChatMessage(reply, isUser: false);
+            _ = SpeakAsync(reply);
+
+            await Task.Delay(800);
+            string[] wynUrls = { "wyn://", "wynapp://", "vn.wyn://", "https://wyn.vn" };
+            foreach (var url in wynUrls)
+            {
+                try
+                {
+                    if (await Launcher.Default.CanOpenAsync(new Uri(url)))
+                    {
+                        await Launcher.Default.OpenAsync(new Uri(url));
+                        return true;
+                    }
+                }
+                catch { }
+            }
+            try
+            {
+                await Launcher.Default.OpenAsync(new Uri("https://wyn.vn"));
+            }
+            catch { }
             return true;
         }
 
