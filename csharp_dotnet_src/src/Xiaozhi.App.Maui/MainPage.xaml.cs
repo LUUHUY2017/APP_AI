@@ -28,7 +28,18 @@ public partial class MainPage : ContentPage
         _wsUrl = Preferences.Default.Get("lily_ws_url", _wsUrl);
         _token = Preferences.Default.Get("lily_token", _token);
         _deviceId = Preferences.Default.Get("lily_device_id", _deviceId);
+        if (string.IsNullOrWhiteSpace(_deviceId) || _deviceId == "a0:36:bc:2c:ed:40" || _deviceId == "00:00:00:00:00:00")
+        {
+            _deviceId = "38:60:77:dc:90:11";
+            Preferences.Default.Set("lily_device_id", _deviceId);
+        }
+
         var clientId = Preferences.Default.Get("lily_client_id", "d7377f0a-2682-4e4f-a125-e0a78c730cf8");
+        if (string.IsNullOrWhiteSpace(clientId) || clientId == "maui-ios-client" || clientId == "21ebee2f-926c-4703-9010-b488f5939580")
+        {
+            clientId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+            Preferences.Default.Set("lily_client_id", clientId);
+        }
 
         _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
         _textStreamer = new TextToAudioStreamer();
@@ -220,7 +231,7 @@ public partial class MainPage : ContentPage
             _wsUrl = Preferences.Default.Get("lily_ws_url", _wsUrl);
             _token = Preferences.Default.Get("lily_token", _token);
             _deviceId = Preferences.Default.Get("lily_device_id", _deviceId);
-            var clientId = Preferences.Default.Get("lily_client_id", "maui-ios-client");
+            var clientId = Preferences.Default.Get("lily_client_id", "d7377f0a-2682-4e4f-a125-e0a78c730cf8");
 
             _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
             SetupClientHandlers();

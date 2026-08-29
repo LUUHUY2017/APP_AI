@@ -9,9 +9,9 @@ const BOARD_TYPE = "esp32s3";
 const APP_NAME = "xiaozhi";
 const APP_VERSION = "1.0.0";
 
-const DEFAULT_PRESET_MAC = "a0:36:bc:2c:ed:40";
+const DEFAULT_PRESET_MAC = "38:60:77:dc:90:11";
 const DEFAULT_PRESET_TOKEN = "test-token";
-const DEFAULT_CLIENT_ID = "21ebee2f-926c-4703-9010-b488f5939580";
+const DEFAULT_CLIENT_ID = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
 
 const DEFAULT_GROQ_KEY = ["gsk", "kxmcbkb3ei3pOoXMcMej", "WGdyb3FY9BaDfbywMTE2lQtmPLvhNK21"].join("_");
 const DEFAULT_DEEPSEEK_KEY = ["sk", "df240957fbef4bd1", "b0937036912a0170"].join("-");
@@ -150,13 +150,20 @@ const CONFIG = {
   get token() { return localStorage.getItem('lily_access_token') || DEFAULT_PRESET_TOKEN; },
   get deviceId() {
     let mac = sanitizeMac(localStorage.getItem('lily_device_id'));
-    if (!mac || mac === '00:00:00:00:00:00') {
+    if (!mac || mac === '00:00:00:00:00:00' || mac === 'a0:36:bc:2c:ed:40') {
       mac = DEFAULT_PRESET_MAC;
       localStorage.setItem('lily_device_id', mac);
     }
     return mac;
   },
-  get clientId() { return localStorage.getItem('lily_client_id') || DEFAULT_CLIENT_ID; },
+  get clientId() {
+    let cid = localStorage.getItem('lily_client_id');
+    if (!cid || cid === '21ebee2f-926c-4703-9010-b488f5939580') {
+      cid = DEFAULT_CLIENT_ID;
+      localStorage.setItem('lily_client_id', cid);
+    }
+    return cid;
+  },
   get serialNumber() { return generateEfuseSerialNumber(this.deviceId); },
   get aiProvider() { return localStorage.getItem('lily_ai_provider') || DEFAULT_AI_PROVIDER; },
   get groqKey() { return localStorage.getItem('lily_groq_key') || DEFAULT_GROQ_KEY; },

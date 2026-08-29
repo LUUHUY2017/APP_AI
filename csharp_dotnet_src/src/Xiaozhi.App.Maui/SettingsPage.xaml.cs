@@ -26,8 +26,24 @@ public partial class SettingsPage : ContentPage
         var config = ConfigManager.Instance.Config;
         WsUrlEntry.Text = Preferences.Default.Get("lily_ws_url", config.SystemOptions.Network.WebSocketUrl);
         TokenEntry.Text = Preferences.Default.Get("lily_token", config.SystemOptions.Network.WebSocketAccessToken);
-        DeviceIdEntry.Text = Preferences.Default.Get("lily_device_id", config.SystemOptions.DeviceId);
-        ClientIdEntry.Text = Preferences.Default.Get("lily_client_id", config.SystemOptions.ClientId);
+
+        var savedMac = Preferences.Default.Get("lily_device_id", config.SystemOptions.DeviceId);
+        if (string.IsNullOrWhiteSpace(savedMac) || savedMac == "a0:36:bc:2c:ed:40" || savedMac == "00:00:00:00:00:00")
+        {
+            savedMac = "38:60:77:dc:90:11";
+            Preferences.Default.Set("lily_device_id", savedMac);
+        }
+        DeviceIdEntry.Text = savedMac;
+
+        var savedClientId = Preferences.Default.Get("lily_client_id", config.SystemOptions.ClientId);
+        if (string.IsNullOrWhiteSpace(savedClientId) || savedClientId == "maui-ios-client" || savedClientId == "21ebee2f-926c-4703-9010-b488f5939580")
+        {
+            savedClientId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+            Preferences.Default.Set("lily_client_id", savedClientId);
+        }
+        ClientIdEntry.Text = savedClientId;
+
+        SerialNoLabel.Text = DeviceFingerprint.GenerateSerialNumber(savedMac);
 
         Unloaded += (s, e) => _cts?.Cancel();
     }
@@ -40,7 +56,7 @@ public partial class SettingsPage : ContentPage
         var deviceId = ClientIdEntry.Text?.Trim();
         if (string.IsNullOrWhiteSpace(deviceId) || deviceId == "maui-ios-client" || !Guid.TryParse(deviceId, out _))
         {
-            deviceId = Guid.NewGuid().ToString();
+            deviceId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
             ClientIdEntry.Text = deviceId;
         }
 
