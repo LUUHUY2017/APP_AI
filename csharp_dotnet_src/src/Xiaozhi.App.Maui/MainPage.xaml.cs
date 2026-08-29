@@ -34,10 +34,10 @@ public partial class MainPage : ContentPage
             Preferences.Default.Set("lily_device_id", _deviceId);
         }
 
-        var clientId = Preferences.Default.Get("lily_client_id", "d7377f0a-2682-4e4f-a125-e0a78c730cf8");
-        if (string.IsNullOrWhiteSpace(clientId) || clientId == "maui-ios-client" || clientId == "21ebee2f-926c-4703-9010-b488f5939580")
+        var clientId = Preferences.Default.Get("lily_client_id", "b7907b41-1534-422b-a9ce-26b227286d8e");
+        if (string.IsNullOrWhiteSpace(clientId) || clientId == "maui-ios-client" || clientId == "21ebee2f-926c-4703-9010-b488f5939580" || clientId == "d7377f0a-2682-4e4f-a125-e0a78c730cf8")
         {
-            clientId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+            clientId = "b7907b41-1534-422b-a9ce-26b227286d8e";
             Preferences.Default.Set("lily_client_id", clientId);
         }
 
@@ -231,7 +231,7 @@ public partial class MainPage : ContentPage
             _wsUrl = Preferences.Default.Get("lily_ws_url", _wsUrl);
             _token = Preferences.Default.Get("lily_token", _token);
             _deviceId = Preferences.Default.Get("lily_device_id", _deviceId);
-            var clientId = Preferences.Default.Get("lily_client_id", "d7377f0a-2682-4e4f-a125-e0a78c730cf8");
+            var clientId = Preferences.Default.Get("lily_client_id", "b7907b41-1534-422b-a9ce-26b227286d8e");
 
             _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
             SetupClientHandlers();

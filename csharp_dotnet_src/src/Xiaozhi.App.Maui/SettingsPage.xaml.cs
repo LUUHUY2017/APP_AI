@@ -36,9 +36,9 @@ public partial class SettingsPage : ContentPage
         DeviceIdEntry.Text = savedMac;
 
         var savedClientId = Preferences.Default.Get("lily_client_id", config.SystemOptions.ClientId);
-        if (string.IsNullOrWhiteSpace(savedClientId) || savedClientId == "maui-ios-client" || savedClientId == "21ebee2f-926c-4703-9010-b488f5939580")
+        if (string.IsNullOrWhiteSpace(savedClientId) || savedClientId == "maui-ios-client" || savedClientId == "21ebee2f-926c-4703-9010-b488f5939580" || savedClientId == "d7377f0a-2682-4e4f-a125-e0a78c730cf8")
         {
-            savedClientId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+            savedClientId = "b7907b41-1534-422b-a9ce-26b227286d8e";
             Preferences.Default.Set("lily_client_id", savedClientId);
         }
         ClientIdEntry.Text = savedClientId;
@@ -56,7 +56,7 @@ public partial class SettingsPage : ContentPage
         var deviceId = ClientIdEntry.Text?.Trim();
         if (string.IsNullOrWhiteSpace(deviceId) || deviceId == "maui-ios-client" || !Guid.TryParse(deviceId, out _))
         {
-            deviceId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+            deviceId = "b7907b41-1534-422b-a9ce-26b227286d8e";
             ClientIdEntry.Text = deviceId;
         }
 
@@ -290,7 +290,7 @@ public partial class SettingsPage : ContentPage
             WsUrlEntry.Text = "wss://api.tenclass.net/xiaozhi/v1/";
             TokenEntry.Text = "test-token";
             DeviceIdEntry.Text = "38:60:77:dc:90:11";
-            ClientIdEntry.Text = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+            ClientIdEntry.Text = "b7907b41-1534-422b-a9ce-26b227286d8e";
 
             Preferences.Default.Remove("lily_ws_url");
             Preferences.Default.Remove("lily_token");

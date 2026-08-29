@@ -11,7 +11,7 @@ const APP_VERSION = "1.0.0";
 
 const DEFAULT_PRESET_MAC = "38:60:77:dc:90:11";
 const DEFAULT_PRESET_TOKEN = "test-token";
-const DEFAULT_CLIENT_ID = "d7377f0a-2682-4e4f-a125-e0a78c730cf8";
+const DEFAULT_CLIENT_ID = "b7907b41-1534-422b-a9ce-26b227286d8e";
 
 const DEFAULT_GROQ_KEY = ["gsk", "kxmcbkb3ei3pOoXMcMej", "WGdyb3FY9BaDfbywMTE2lQtmPLvhNK21"].join("_");
 const DEFAULT_DEEPSEEK_KEY = ["sk", "df240957fbef4bd1", "b0937036912a0170"].join("-");

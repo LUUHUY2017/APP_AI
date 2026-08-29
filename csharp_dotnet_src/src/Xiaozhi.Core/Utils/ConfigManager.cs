@@ -76,7 +76,7 @@ public class ConfigManager
         {
             SystemOptions = new SystemOptions
             {
-                ClientId = "d7377f0a-2682-4e4f-a125-e0a78c730cf8",
+                ClientId = "b7907b41-1534-422b-a9ce-26b227286d8e",
                 DeviceId = "38:60:77:dc:90:11",
                 Network = new NetworkOptions
                 {
