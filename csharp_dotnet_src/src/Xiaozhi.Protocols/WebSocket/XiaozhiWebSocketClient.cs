@@ -207,6 +207,7 @@ public class XiaozhiWebSocketClient : IProtocol
             waitAttempts++;
         }
 
+        // Nhường 100% quyền xử lý nội dung & cấu hình cho Server Xiaozhi (xiaozhi.me)
         var msg = new ListenMessage
         {
             SessionId = _sessionId,

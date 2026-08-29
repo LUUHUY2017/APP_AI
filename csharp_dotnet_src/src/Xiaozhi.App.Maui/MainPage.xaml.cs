@@ -173,16 +173,23 @@ public partial class MainPage : ContentPage
 
         _client.OnTtsStateChanged += async (state) =>
         {
-            MainThread.BeginInvokeOnMainThread(() =>
+            MainThread.BeginInvokeOnMainThread(async () =>
             {
                 if (state == "start" || state == "sentence_start")
                 {
                     StatusLabel.Text = "🔊 Xiaozhi AI đang phát giọng nói...";
                 }
-                else if (state == "stop" || state == "sentence_end")
+                else if (state == "stop" || state == "sentence_end" || state == "finish" || state == "end" || state == "idle")
                 {
                     FlushAndPlayServerAudioOnIos();
                     StatusLabel.Text = "✅ Sẵn sàng";
+
+                    // Bật Chế độ Rảnh tay: Tự động kích hoạt lại micro liên tục sau khi AI nói xong
+                    if (_handsFree && !_isRecording)
+                    {
+                        await Task.Delay(1000);
+                        await StartRecordingAsync();
+                    }
                 }
             });
             await Task.CompletedTask;
@@ -218,6 +225,7 @@ public partial class MainPage : ContentPage
             _receivedResponse = true;
             MainThread.BeginInvokeOnMainThread(() =>
             {
+                StatusLabel.Text = "💬 Trợ lý đang trả lời...";
                 AppendOrAddAiResponse(text);
             });
             await Task.CompletedTask;
@@ -305,6 +313,7 @@ public partial class MainPage : ContentPage
     private async Task StartRecordingAsync()
     {
         _isRecording = true;
+        _hasReceivedServerAudio = false; // Reset trạng thái âm thanh Server cho câu hỏi mới
         MicButton.Text = "⏹";
         MicButton.BackgroundColor = Color.FromArgb("#2D3037");
         MicButton.TextColor = Colors.White;
@@ -321,14 +330,15 @@ public partial class MainPage : ContentPage
     {
         _silenceTimer?.Stop();
         _silenceTimer?.Dispose();
-        _silenceTimer = new System.Timers.Timer(1400) { AutoReset = false };
+        // Nâng thời gian ngắt im lặng từ 1.4s lên 4.0s (4000ms) để người dùng thoải mái nói hết toàn bộ câu dài mà không bị tự ngắt mic
+        _silenceTimer = new System.Timers.Timer(5000) { AutoReset = false };
         _silenceTimer.Elapsed += (s, e) =>
         {
             if (_isRecording)
             {
                 MainThread.BeginInvokeOnMainThread(async () =>
                 {
-                    StatusLabel.Text = "⚡ Đã phát hiện im lặng. Tự động gửi...";
+                    StatusLabel.Text = "⚡ Đã hoàn tất câu nói. Tự động gửi...";
                     await StopRecordingAndProcessAsync();
                 });
             }
@@ -479,6 +489,7 @@ public partial class MainPage : ContentPage
         AddChatMessage(text, isUser: true);
         StatusLabel.Text = "🧠 Đang xử lý...";
         _receivedResponse = false;
+        _hasReceivedServerAudio = false; // Reset trạng thái âm thanh Server cho câu hỏi mới
 
         try
         {
@@ -522,8 +533,8 @@ public partial class MainPage : ContentPage
         string appName = "";
 
         // 🔒 STRICT BANKING SAFETY SHIELD (Nghiêm cấm truy cập ứng dụng ngân hàng và tài chính)
-        string[] bankingKeywords = { 
-            "ngân hàng", "bank", "vietcombank", "vcb", "techcombank", "tcb", "bidv", "agribank", 
+        string[] bankingKeywords = {
+            "ngân hàng", "bank", "vietcombank", "vcb", "techcombank", "tcb", "bidv", "agribank",
             "mbbank", "mb bank", "tpbank", "vpbank", "vib", "acb", "sacombank", "shb", "hdbank",
             "momo", "zalopay", "viettelpay", "vnpay", "chuyển tiền", "rút tiền", "chuyển khoản",
             "tài khoản ngân hàng", "ví điện tử"
