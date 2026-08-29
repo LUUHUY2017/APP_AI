@@ -25,7 +25,7 @@ public partial class MainPage : ContentPage
         _wsUrl = Preferences.Default.Get("lily_ws_url", _wsUrl);
         _token = Preferences.Default.Get("lily_token", _token);
         _deviceId = Preferences.Default.Get("lily_device_id", _deviceId);
-        if (string.IsNullOrWhiteSpace(_deviceId) || _deviceId == "a0:36:bc:2c:ed:40" || _deviceId == "00:00:00:00:00:00")
+        if (string.IsNullOrWhiteSpace(_deviceId))
         {
             _deviceId = "38:60:77:dc:90:11";
             Preferences.Default.Set("lily_device_id", _deviceId);
@@ -310,6 +310,66 @@ public partial class MainPage : ContentPage
         }
     }
 
+#if IOS || MACCATALYST
+    private AVFoundation.AVAudioEngine? _audioEngine;
+    private Concentus.Structs.OpusEncoder? _opusEncoder16k;
+
+    private void StartIosMicrophoneRecording()
+    {
+        try
+        {
+            _opusEncoder16k = new Concentus.Structs.OpusEncoder(16000, 1, Concentus.Enums.OpusApplication.OPUS_APPLICATION_VOIP);
+            _audioEngine = new AVFoundation.AVAudioEngine();
+            var inputNode = _audioEngine.InputNode;
+            nuint bus = 0;
+
+            var recordFormat = new AVFoundation.AVAudioFormat(AVFoundation.AVAudioCommonFormat.PCMInt16, 16000, 1, false);
+
+            inputNode.InstallTapOnBus(bus, 1920, recordFormat, (buffer, time) =>
+            {
+                if (!_isRecording || _client == null || !_client.IsConnected) return;
+
+                var audioBytes = new byte[buffer.FrameLength * 2];
+                System.Runtime.InteropServices.Marshal.Copy(buffer.AudioBufferList[0].Data, audioBytes, 0, (int)audioBytes.Length);
+
+                var pcmShorts = new short[audioBytes.Length / 2];
+                Buffer.BlockCopy(audioBytes, 0, pcmShorts, 0, audioBytes.Length);
+
+                var outputOpus = new byte[1000];
+                int encodedBytes = _opusEncoder16k.Encode(pcmShorts, 0, pcmShorts.Length, outputOpus, 0, outputOpus.Length);
+                if (encodedBytes > 0)
+                {
+                    var opusData = new byte[encodedBytes];
+                    Array.Copy(outputOpus, opusData, encodedBytes);
+                    _ = _client.SendAudioAsync(opusData);
+                }
+            });
+
+            _audioEngine.Prepare();
+            _audioEngine.StartAndReturnError(out var error);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Mic error: {ex.Message}");
+        }
+    }
+
+    private void StopIosMicrophoneRecording()
+    {
+        try
+        {
+            if (_audioEngine != null)
+            {
+                _audioEngine.InputNode.RemoveTapOnBus(0);
+                _audioEngine.Stop();
+                _audioEngine.Dispose();
+                _audioEngine = null;
+            }
+        }
+        catch { }
+    }
+#endif
+
     private async Task StartRecordingAsync()
     {
         _isRecording = true;
@@ -323,6 +383,9 @@ public partial class MainPage : ContentPage
         if (_client.IsConnected)
         {
             await _client.StartListeningAsync(mode: "manual");
+#if IOS || MACCATALYST
+            StartIosMicrophoneRecording();
+#endif
         }
     }
 
@@ -330,8 +393,7 @@ public partial class MainPage : ContentPage
     {
         _silenceTimer?.Stop();
         _silenceTimer?.Dispose();
-        // Nâng thời gian ngắt im lặng từ 1.4s lên 4.0s (4000ms) để người dùng thoải mái nói hết toàn bộ câu dài mà không bị tự ngắt mic
-        _silenceTimer = new System.Timers.Timer(5000) { AutoReset = false };
+        _silenceTimer = new System.Timers.Timer(4000) { AutoReset = false };
         _silenceTimer.Elapsed += (s, e) =>
         {
             if (_isRecording)
@@ -355,6 +417,10 @@ public partial class MainPage : ContentPage
         MicButton.BackgroundColor = Colors.Transparent;
         MicButton.TextColor = Color.FromArgb("#AEB7C2");
         StatusLabel.Text = "🧠 Đang xử lý...";
+
+#if IOS || MACCATALYST
+        StopIosMicrophoneRecording();
+#endif
 
         if (_client.IsConnected)
         {

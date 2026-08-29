@@ -28,7 +28,7 @@ public partial class SettingsPage : ContentPage
         TokenEntry.Text = Preferences.Default.Get("lily_token", config.SystemOptions.Network.WebSocketAccessToken);
 
         var savedMac = Preferences.Default.Get("lily_device_id", config.SystemOptions.DeviceId);
-        if (string.IsNullOrWhiteSpace(savedMac) || savedMac == "a0:36:bc:2c:ed:40" || savedMac == "00:00:00:00:00:00")
+        if (string.IsNullOrWhiteSpace(savedMac))
         {
             savedMac = "38:60:77:dc:90:11";
             Preferences.Default.Set("lily_device_id", savedMac);
