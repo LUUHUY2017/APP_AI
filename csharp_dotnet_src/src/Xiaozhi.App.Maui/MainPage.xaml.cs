@@ -93,11 +93,31 @@ public partial class MainPage : ContentPage
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            StatusLabel.Text = "🔄 Đang kết nối...";
+            StatusLabel.Text = "🔄 Đang kiểm tra OTA & kết nối...";
         });
 
         try
         {
+            var clientId = Preferences.Default.Get("lily_client_id", "b7907b41-1534-422b-a9ce-26b227286d8e");
+            var macAddress = Preferences.Default.Get("lily_device_id", "38:60:77:dc:90:11");
+
+            var activationService = new Xiaozhi.Protocols.Ota.DeviceActivationService();
+            var actResult = await activationService.CheckOrRequestActivationAsync(clientId, macAddress);
+
+            if (!string.IsNullOrEmpty(actResult.Token))
+            {
+                _token = actResult.Token;
+                Preferences.Default.Set("lily_token", _token);
+                if (!string.IsNullOrEmpty(actResult.WebSocketUrl))
+                {
+                    _wsUrl = actResult.WebSocketUrl;
+                    Preferences.Default.Set("lily_ws_url", _wsUrl);
+                }
+
+                _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
+                SetupClientHandlers();
+            }
+
             if (string.IsNullOrWhiteSpace(_token))
             {
                 _token = "test-token";

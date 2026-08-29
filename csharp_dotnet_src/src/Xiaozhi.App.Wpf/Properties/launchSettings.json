@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Xiaozhi.App.Wpf": {
+      "commandName": "Project",
+      "sqlDebugging": true,
+      "jsWebView2Debugging": true
+    },
+    "Profile 1": {
+      "commandName": "Project"
+    }
+  }
+}
