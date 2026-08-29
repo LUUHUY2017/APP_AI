@@ -37,7 +37,7 @@ jobs:
     - name: Build and Publish MAUI iOS App
       run: |
         cd csharp_dotnet_src
-        dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false
+        dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false /p:ApplicationVersion=${{ github.run_number }} /p:ApplicationDisplayVersion=1.0.${{ github.run_number }}
 
     - name: Auto Sign IPA with Apple Credentials
       env:
@@ -76,7 +76,7 @@ jobs:
                 <key>bundle-identifier</key>
                 <string>com.xiaozhi.ai.lily</string>
                 <key>bundle-version</key>
-                <string>1.0.1</string>
+                <string>1.0.${{ github.run_number }}</string>
                 <key>kind</key>
                 <string>software</string>
                 <key>title</key>
@@ -91,7 +91,7 @@ jobs:
     - name: Upload iOS IPA and OTA Manifest Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: Lily-AI-iOS-App
+        name: Lily-AI-iOS-App-v1.0.${{ github.run_number }}
         path: |
           csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
           csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.plist
@@ -100,11 +100,12 @@ jobs:
       uses: softprops/action-gh-release@v2
       if: success()
       with:
-        tag_name: v1.0.1
-        name: "BACKEND AI iOS v1.0.1"
-        body: "Bản cập nhật tự động IPA & Manifest từ GitHub Actions CI/CD."
+        tag_name: v1.0.${{ github.run_number }}
+        name: "BACKEND AI iOS v1.0.${{ github.run_number }}"
+        body: "Bản cập nhật tự động IPA & Manifest v1.0.${{ github.run_number }} từ GitHub Actions CI/CD."
         draft: false
         prerelease: false
+        make_latest: true
         overwrite: true
         fail_on_unmatched_files: false
         files: |

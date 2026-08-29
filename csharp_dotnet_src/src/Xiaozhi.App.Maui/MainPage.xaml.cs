@@ -77,116 +77,76 @@ public partial class MainPage : ContentPage
 
     private readonly Concentus.Structs.OpusDecoder _opusDecoder24k = new Concentus.Structs.OpusDecoder(24000, 1);
     private bool _hasReceivedServerAudio = false;
-    private readonly System.IO.MemoryStream _currentAudioBlock = new();
-    private readonly System.Collections.Generic.Queue<byte[]> _iosAudioChunkQueue = new();
-    private bool _isIosAudioPlaying = false;
+#if IOS || MACCATALYST
+    private AVFoundation.AVAudioEngine? _iosPlaybackEngine;
+    private AVFoundation.AVAudioPlayerNode? _iosPlayerNode;
+    private AVFoundation.AVAudioFormat? _iosPcmFormat24k;
+    private bool _isIosPlaybackEngineStarted = false;
+
+    private void InitIosPlaybackEngine()
+    {
+        if (_isIosPlaybackEngineStarted) return;
+        try
+        {
+            _iosPlaybackEngine = new AVFoundation.AVAudioEngine();
+            _iosPlayerNode = new AVFoundation.AVAudioPlayerNode();
+            _iosPcmFormat24k = new AVFoundation.AVAudioFormat(AVFoundation.AVAudioCommonFormat.PCMInt16, 24000, 1, false);
+
+            _iosPlaybackEngine.AttachNode(_iosPlayerNode);
+            _iosPlaybackEngine.Connect(_iosPlayerNode, _iosPlaybackEngine.MainMixerNode, _iosPcmFormat24k);
+            _iosPlaybackEngine.Prepare();
+            _iosPlaybackEngine.StartAndReturnError(out _);
+            _iosPlayerNode.Play();
+            _isIosPlaybackEngineStarted = true;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"InitIosPlaybackEngine Error: {ex.Message}");
+        }
+    }
 
     private void PlayServerAudioChunkOnIos(byte[] pcmBytes)
     {
-        byte[]? readyBlock = null;
-        lock (_currentAudioBlock)
-        {
-            _currentAudioBlock.Write(pcmBytes, 0, pcmBytes.Length);
-            // Tích lũy 3,840 byte PCM (chỉ 80ms âm thanh 24kHz), phát cực nhanh ngay lập tức
-            if (_currentAudioBlock.Length >= 3840)
-            {
-                readyBlock = _currentAudioBlock.ToArray();
-                _currentAudioBlock.SetLength(0);
-            }
-        }
+        if (pcmBytes == null || pcmBytes.Length == 0) return;
 
-        if (readyBlock != null)
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            EnqueueAndPlayAudioBlock(readyBlock);
-        }
+            try
+            {
+                InitIosPlaybackEngine();
+
+                if (_iosPlayerNode != null && _iosPcmFormat24k != null)
+                {
+                    uint sampleCount = (uint)(pcmBytes.Length / 2);
+                    using var pcmBuffer = new AVFoundation.AVAudioPcmBuffer(_iosPcmFormat24k, sampleCount);
+                    if (pcmBuffer != null)
+                    {
+                        pcmBuffer.FrameLength = sampleCount;
+                        System.Runtime.InteropServices.Marshal.Copy(pcmBytes, 0, pcmBuffer.Int16ChannelData, pcmBytes.Length);
+                        _iosPlayerNode.ScheduleBuffer(pcmBuffer, null);
+
+                        if (!_iosPlayerNode.Playing)
+                        {
+                            _iosPlayerNode.Play();
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"PlayServerAudioChunkOnIos Error: {ex.Message}");
+            }
+        });
     }
 
     private void FlushAndPlayServerAudioOnIos()
     {
-        byte[]? remainingBlock = null;
-        lock (_currentAudioBlock)
-        {
-            if (_currentAudioBlock.Length > 0)
-            {
-                remainingBlock = _currentAudioBlock.ToArray();
-                _currentAudioBlock.SetLength(0);
-            }
-        }
-
-        if (remainingBlock != null)
-        {
-            EnqueueAndPlayAudioBlock(remainingBlock);
-        }
+        // Với AVAudioPlayerNode, âm thanh đã được đẩy trực tiếp vào Ring Buffer phần cứng của iOS ngay khi gói tin vừa tới
     }
-
-    private void EnqueueAndPlayAudioBlock(byte[] pcmBlock)
-    {
-        lock (_iosAudioChunkQueue)
-        {
-            _iosAudioChunkQueue.Enqueue(pcmBlock);
-        }
-
-        if (!_isIosAudioPlaying)
-        {
-            _isIosAudioPlaying = true;
-            _ = ProcessIosAudioQueueAsync();
-        }
-    }
-
-    private async Task ProcessIosAudioQueueAsync()
-    {
-        while (true)
-        {
-            byte[]? block = null;
-            lock (_iosAudioChunkQueue)
-            {
-                if (_iosAudioChunkQueue.Count > 0)
-                {
-                    block = _iosAudioChunkQueue.Dequeue();
-                }
-                else
-                {
-                    _isIosAudioPlaying = false;
-                    break;
-                }
-            }
-
-            if (block != null && block.Length > 0)
-            {
-                byte[] wavHeader = CreateWavHeader(block.Length, 24000, 1, 16);
-                byte[] fullWav = new byte[wavHeader.Length + block.Length];
-                Buffer.BlockCopy(wavHeader, 0, fullWav, 0, wavHeader.Length);
-                Buffer.BlockCopy(block, 0, fullWav, wavHeader.Length, block.Length);
-
-                double durationMs = (double)block.Length / (24000 * 2) * 1000;
-
-                var tcs = new TaskCompletionSource<bool>();
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    try
-                    {
-                        using var nsData = Foundation.NSData.FromArray(fullWav);
-                        var player = AVFoundation.AVAudioPlayer.FromData(nsData);
-                        if (player != null)
-                        {
-                            player.FinishedPlaying += (s, e) => tcs.TrySetResult(true);
-                            player.Play();
-                        }
-                        else
-                        {
-                            tcs.TrySetResult(true);
-                        }
-                    }
-                    catch
-                    {
-                        tcs.TrySetResult(true);
-                    }
-                });
-
-                await Task.WhenAny(tcs.Task, Task.Delay((int)Math.Max(50, durationMs - 40)));
-            }
-        }
-    }
+#else
+    private void PlayServerAudioChunkOnIos(byte[] pcmBytes) { }
+    private void FlushAndPlayServerAudioOnIos() { }
+#endif
 
     public static byte[] CreateWavHeader(int pcmDataLength, int sampleRate = 24000, int channels = 1, int bitsPerSample = 16)
     {
