@@ -304,12 +304,14 @@ public partial class MainPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
-        // Tự động kiểm tra bản cập nhật mới (OTA Auto-Update) khi mở App trên iOS
+        // Đã tắt tự động hiển thị thông báo cập nhật theo yêu cầu người dùng
+        /*
         _ = Task.Run(async () =>
         {
             await Task.Delay(2500);
             await _appUpdateService.CheckForUpdatesAsync(this, silentIfLatest: true);
         });
+        */
     }
 
     private async Task ConnectWithOtaAsync()

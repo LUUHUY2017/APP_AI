@@ -15,6 +15,9 @@ public class OtaAutoUpdateService
 
     public async Task CheckForUpdatesAsync(Page page, bool silentIfLatest = true)
     {
+        // Đã tắt tính năng tự động hiển thị thông báo cập nhật theo yêu cầu người dùng
+        await Task.CompletedTask;
+        /*
         try
         {
             var currentVersionStr = AppInfo.Current.VersionString; // e.g. "1.0.0"
@@ -48,7 +51,6 @@ public class OtaAutoUpdateService
             string directIpaUrl = "";
             string plistUrl = "";
 
-            // Duyệt mảng assets để tìm file manifest.plist (iOS OTA Manifest) hoặc file .ipa
             if (root.TryGetProperty("assets", out var assetsElem) && assetsElem.ValueKind == JsonValueKind.Array)
             {
                 foreach (var asset in assetsElem.EnumerateArray())
@@ -73,11 +75,8 @@ public class OtaAutoUpdateService
                 }
             }
 
-            string rawPlistUrl = "https://raw.githubusercontent.com/LUUHUY2017/APP_AI/main/manifest.plist";
-            string itmsUrl = $"itms-services://?action=download-manifest&url={Uri.EscapeDataString(rawPlistUrl)}";
             string htmlReleaseUrl = root.TryGetProperty("html_url", out var urlProp) ? urlProp.GetString() ?? "https://github.com/LUUHUY2017/APP_AI/releases" : "https://github.com/LUUHUY2017/APP_AI/releases";
 
-            // Clean version string (e.g. "v1.0.1" -> "1.0.1")
             var remoteVersionStr = tagName?.TrimStart('v', 'V') ?? "";
 
             if (IsNewerVersion(remoteVersionStr, currentVersionStr))
@@ -86,8 +85,8 @@ public class OtaAutoUpdateService
                 {
                     bool updateNow = await page.DisplayAlert(
                         $"🚀 Cập nhật mới (v{remoteVersionStr})",
-                        $"Đã có phiên bản mới v{remoteVersionStr}!\n\nNội dung cập nhật:\n{releaseNotes}\n\nBạn có muốn tự động tải & cài đặt ngay không?",
-                        "⚡ Cài đặt ngay",
+                        $"Đã có phiên bản mới v{remoteVersionStr}!\n\nNội dung cập nhật:\n{releaseNotes}\n\nBạn có muốn mở Safari để tải bản IPA mới nhất không?",
+                        "📥 Tải IPA mới (Safari)",
                         "Để sau"
                     );
 
@@ -95,21 +94,9 @@ public class OtaAutoUpdateService
                     {
                         try
                         {
-                            // 1. Thử kích hoạt OTA cài đặt không dây chính thức của iOS
-                            bool success = await Launcher.Default.OpenAsync(new Uri(itmsUrl));
-                            if (!success)
-                            {
-                                await Launcher.Default.OpenAsync(new Uri(htmlReleaseUrl));
-                            }
+                            await Launcher.Default.OpenAsync(new Uri(htmlReleaseUrl));
                         }
-                        catch
-                        {
-                            try
-                            {
-                                await Launcher.Default.OpenAsync(new Uri(htmlReleaseUrl));
-                            }
-                            catch { }
-                        }
+                        catch { }
                     }
                 });
             }
@@ -125,6 +112,7 @@ public class OtaAutoUpdateService
         {
             System.Diagnostics.Debug.WriteLine($"OtaAutoUpdateService error: {ex.Message}");
         }
+        */
     }
 
     private bool IsNewerVersion(string remoteVer, string currentVer)
