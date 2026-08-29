@@ -549,17 +549,11 @@ class LilyPWA {
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utterance.lang = 'vi-VN';
     utterance.rate = 1.0;
-    utterance.pitch = 0.78; // Hạ tông giọng thành Giọng Nam trầm ấm
+    utterance.pitch = 1.0; // Giữ chuẩn cao độ tự nhiên theo cấu hình từ Server Xiaozhi
 
     const voices = window.speechSynthesis.getVoices();
-    // Ưu tiên chọn giọng Nam tiếng Việt hoặc giọng Nam hệ thống
-    const maleVoice = voices.find(v => v && v.lang && (v.lang.includes('vi') || v.lang.includes('VN')) && (v.name.includes('Male') || v.name.includes('Nam') || v.name.includes('Minh') || v.name.includes('An')));
     const viVoice = voices.find(v => v && v.lang && (v.lang.includes('vi') || v.lang.includes('VN')));
-    if (maleVoice) {
-      utterance.voice = maleVoice;
-    } else if (viVoice) {
-      utterance.voice = viVoice;
-    }
+    if (viVoice) utterance.voice = viVoice;
 
     utterance.onstart = () => {
       this.setSpeaking(true);

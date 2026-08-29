@@ -75,8 +75,119 @@ public partial class MainPage : ContentPage
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _speechQueue = new();
     private bool _isSpeaking = false;
 
+    private readonly Concentus.Structs.OpusDecoder _opusDecoder24k = new Concentus.Structs.OpusDecoder(24000, 1);
+    private bool _hasReceivedServerAudio = false;
+    private readonly System.IO.MemoryStream _serverAudioPcmStream = new();
+
+    private void PlayServerAudioChunkOnIos(byte[] pcmBytes)
+    {
+        lock (_serverAudioPcmStream)
+        {
+            _serverAudioPcmStream.Write(pcmBytes, 0, pcmBytes.Length);
+        }
+    }
+
+    private void FlushAndPlayServerAudioOnIos()
+    {
+        byte[] pcmData;
+        lock (_serverAudioPcmStream)
+        {
+            pcmData = _serverAudioPcmStream.ToArray();
+            _serverAudioPcmStream.SetLength(0);
+        }
+
+        if (pcmData.Length == 0) return;
+
+        byte[] wavHeader = CreateWavHeader(pcmData.Length, 24000, 1, 16);
+        byte[] fullWav = new byte[wavHeader.Length + pcmData.Length];
+        Buffer.BlockCopy(wavHeader, 0, fullWav, 0, wavHeader.Length);
+        Buffer.BlockCopy(pcmData, 0, fullWav, wavHeader.Length, pcmData.Length);
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            try
+            {
+                using var nsData = Foundation.NSData.FromArray(fullWav);
+                var player = AVFoundation.AVAudioPlayer.FromData(nsData);
+                if (player != null)
+                {
+                    player.Play();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"AVAudioPlayer Error: {ex.Message}");
+            }
+        });
+    }
+
+    public static byte[] CreateWavHeader(int pcmDataLength, int sampleRate = 24000, int channels = 1, int bitsPerSample = 16)
+    {
+        byte[] header = new byte[44];
+        int byteRate = sampleRate * channels * (bitsPerSample / 8);
+        int blockAlign = channels * (bitsPerSample / 8);
+
+        header[0] = (byte)'R'; header[1] = (byte)'I'; header[2] = (byte)'F'; header[3] = (byte)'F';
+        int fileSize = 36 + pcmDataLength;
+        Buffer.BlockCopy(BitConverter.GetBytes(fileSize), 0, header, 4, 4);
+
+        header[8] = (byte)'W'; header[9] = (byte)'A'; header[10] = (byte)'V'; header[11] = (byte)'E';
+
+        header[12] = (byte)'f'; header[13] = (byte)'m'; header[14] = (byte)'t'; header[15] = (byte)' ';
+        Buffer.BlockCopy(BitConverter.GetBytes(16), 0, header, 16, 4);
+        Buffer.BlockCopy(BitConverter.GetBytes((short)1), 0, header, 20, 2);
+        Buffer.BlockCopy(BitConverter.GetBytes((short)channels), 0, header, 22, 2);
+        Buffer.BlockCopy(BitConverter.GetBytes(sampleRate), 0, header, 24, 4);
+        Buffer.BlockCopy(BitConverter.GetBytes(byteRate), 0, header, 28, 4);
+        Buffer.BlockCopy(BitConverter.GetBytes((short)blockAlign), 0, header, 32, 2);
+        Buffer.BlockCopy(BitConverter.GetBytes((short)bitsPerSample), 0, header, 34, 2);
+
+        header[36] = (byte)'d'; header[37] = (byte)'a'; header[38] = (byte)'t'; header[39] = (byte)'a';
+        Buffer.BlockCopy(BitConverter.GetBytes(pcmDataLength), 0, header, 40, 4);
+
+        return header;
+    }
+
     private void SetupClientHandlers()
     {
+        _client.OnIncomingAudio += async (opusData) =>
+        {
+            _hasReceivedServerAudio = true;
+            try
+            {
+                var outputPcm = new short[2880];
+                int decodedSamples = _opusDecoder24k.Decode(opusData, 0, opusData.Length, outputPcm, 0, outputPcm.Length, false);
+                if (decodedSamples > 0)
+                {
+                    var pcmBytes = new byte[decodedSamples * 2];
+                    Buffer.BlockCopy(outputPcm, 0, pcmBytes, 0, pcmBytes.Length);
+                    PlayServerAudioChunkOnIos(pcmBytes);
+                }
+            }
+            catch (Exception ex)
+            {
+                XiaozhiWebSocketClient.Log($"OnIncomingAudio error: {ex.Message}");
+            }
+            await Task.CompletedTask;
+        };
+
+        _client.OnTtsStateChanged += async (state) =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                if (state == "start" || state == "sentence_start")
+                {
+                    StatusLabel.Text = "🔊 Xiaozhi AI đang phát giọng nói...";
+                }
+                else if (state == "stop" || state == "sentence_end")
+                {
+                    FlushAndPlayServerAudioOnIos();
+                    StatusLabel.Text = "✅ Sẵn sàng";
+                }
+            });
+            await Task.CompletedTask;
+        };
+
         _client.OnIncomingText += async (msg) =>
         {
             MainThread.BeginInvokeOnMainThread(() =>
@@ -107,7 +218,6 @@ public partial class MainPage : ContentPage
             _receivedResponse = true;
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                StatusLabel.Text = "✅ Sẵn sàng";
                 AppendOrAddAiResponse(text);
             });
             await Task.CompletedTask;
@@ -673,7 +783,10 @@ public partial class MainPage : ContentPage
         }
 
         CurrentMsgLabel.Text = _currentAiStreamText;
-        _ = EnqueueSpeechAsync(chunkText);
+        if (!_hasReceivedServerAudio)
+        {
+            _ = EnqueueSpeechAsync(chunkText);
+        }
     }
 
     private async Task EnqueueSpeechAsync(string text)
@@ -691,15 +804,30 @@ public partial class MainPage : ContentPage
     private async Task ProcessSpeechQueueAsync()
     {
         _isSpeaking = true;
+
+        Locale? viLocale = null;
+        try
+        {
+            var locales = await TextToSpeech.Default.GetLocalesAsync();
+            viLocale = locales.FirstOrDefault(l => l.Language != null && l.Language.StartsWith("vi", StringComparison.OrdinalIgnoreCase));
+        }
+        catch { }
+
         while (_speechQueue.TryDequeue(out var textToSpeak))
         {
             try
             {
-                await TextToSpeech.Default.SpeakAsync(textToSpeak, new SpeechOptions
+                var options = new SpeechOptions
                 {
                     Volume = _currentVolume,
-                    Pitch = 0.75f // Hạ tông Pitch xuống 0.75f tạo giọng Nam trầm ấm
-                });
+                    Pitch = 1.0f // Giữ nguyên cao độ tự nhiên chuẩn theo cấu hình từ Server Xiaozhi
+                };
+                if (viLocale != null)
+                {
+                    options.Locale = viLocale;
+                }
+
+                await TextToSpeech.Default.SpeakAsync(textToSpeak, options);
             }
             catch (Exception ex)
             {
