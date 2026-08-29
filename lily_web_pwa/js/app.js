@@ -283,6 +283,11 @@ class LilyPWA {
   initEvents() {
     if (this.btnSettings) {
       this.btnSettings.addEventListener('click', () => {
+        const pin = prompt("🔒 BẢO MẬT CẤU HÌNH:\nVui lòng nhập mật khẩu bảo mật (PIN):");
+        if (pin !== "0000") {
+          alert("⚠️ Mật khẩu bảo mật không chính xác! Quyền truy cập bị từ chối.");
+          return;
+        }
         this.updateSettingsUi();
         this.settingsModal?.classList.add('open');
       });
@@ -290,6 +295,13 @@ class LilyPWA {
 
     if (this.btnCloseModalX) {
       this.btnCloseModalX.addEventListener('click', () => {
+        this.settingsModal?.classList.remove('open');
+      });
+    }
+
+    const btnCloseModal = document.getElementById('btn-close-modal');
+    if (btnCloseModal) {
+      btnCloseModal.addEventListener('click', () => {
         this.settingsModal?.classList.remove('open');
       });
     }

@@ -48,8 +48,23 @@ public partial class MainPage : ContentPage
         SetupClientHandlers();
         _ = ConnectWithOtaAsync();
 
-        // Auto-Scroll chat content above keyboard when typing
-        TextInput.Focused += (s, e) => ScrollToBottom(350);
+        // Tự động nâng toàn bộ giao diện (MainGrid) lên trên bàn phím ảo iOS khi gõ chữ
+        TextInput.Focused += (s, e) =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                MainGrid.Margin = new Thickness(0, 0, 0, 300);
+                ScrollToBottom(150);
+            });
+        };
+
+        TextInput.Unfocused += (s, e) =>
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                MainGrid.Margin = new Thickness(0, 0, 0, 0);
+            });
+        };
     }
 
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _debugLogs = new();
@@ -245,31 +260,54 @@ public partial class MainPage : ContentPage
             TextColor = Color.FromArgb("#00ff9d"),
             BackgroundColor = Color.FromArgb("#0d071d"),
             FontSize = 11,
-            HeightRequest = 480
+            VerticalOptions = LayoutOptions.Fill
         };
+
+        var headerLabel = new Label
+        {
+            Text = "🐞 LOG WEBSOCKET REAL-TIME (MỚI NHẤT TRÊN ĐẦU 🔥)",
+            TextColor = Color.FromArgb("#FF5E36"),
+            FontAttributes = FontAttributes.Bold,
+            FontSize = 14
+        };
+
+        var closeButton = new Button
+        {
+            Text = "ĐÓNG NHẬT KÝ",
+            BackgroundColor = Color.FromArgb("#bd00ff"),
+            TextColor = Colors.White,
+            FontAttributes = FontAttributes.Bold,
+            HeightRequest = 48,
+            CornerRadius = 24,
+            Margin = new Thickness(0, 6, 0, 4),
+            Command = new Command(async () => await Navigation.PopModalAsync())
+        };
+
+        var mainGrid = new Grid
+        {
+            RowDefinitions = new RowDefinitionCollection
+            {
+                new RowDefinition { Height = GridLength.Auto },
+                new RowDefinition { Height = GridLength.Star },
+                new RowDefinition { Height = GridLength.Auto }
+            },
+            Padding = new Thickness(14, 8, 14, 12),
+            RowSpacing = 8
+        };
+
+        Grid.SetRow(headerLabel, 0);
+        Grid.SetRow(editor, 1);
+        Grid.SetRow(closeButton, 2);
+
+        mainGrid.Children.Add(headerLabel);
+        mainGrid.Children.Add(editor);
+        mainGrid.Children.Add(closeButton);
 
         var page = new ContentPage
         {
             Title = "🐞 Debug Log WebSocket",
             BackgroundColor = Color.FromArgb("#070412"),
-            Content = new VerticalStackLayout
-            {
-                Padding = new Thickness(14),
-                Spacing = 10,
-                Children =
-                {
-                    new Label { Text = "🐞 LOG WEBSOCKET REAL-TIME (MỚI NHẤT TRÊN ĐẦU 🔥)", TextColor = Color.FromArgb("#FF5E36"), FontAttributes = FontAttributes.Bold, FontSize = 14 },
-                    editor,
-                    new Button
-                    {
-                        Text = "ĐÓNG NHẬT KÝ",
-                        BackgroundColor = Color.FromArgb("#bd00ff"),
-                        TextColor = Colors.White,
-                        FontAttributes = FontAttributes.Bold,
-                        Command = new Command(async () => await Navigation.PopModalAsync())
-                    }
-                }
-            }
+            Content = mainGrid
         };
 
         await Navigation.PushModalAsync(new NavigationPage(page));
@@ -282,6 +320,13 @@ public partial class MainPage : ContentPage
 
     private async void OnSettingsClicked(object sender, EventArgs e)
     {
+        string pin = await DisplayPromptAsync("🔒 Bảo mật Cấu hình", "Vui lòng nhập mật khẩu bảo mật (PIN):", "Xác nhận", "Hủy", placeholder: "Nhập PIN (0000)...", keyboard: Keyboard.Numeric);
+        if (pin != "0000")
+        {
+            await DisplayAlert("⚠️ Bảo mật", "Mật khẩu bảo mật không chính xác! Quyền truy cập bị từ chối.", "OK");
+            return;
+        }
+
         var settingsPage = new SettingsPage();
         settingsPage.SettingsSaved += async (s, args) =>
         {

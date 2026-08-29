@@ -277,6 +277,12 @@ public partial class SettingsPage : ContentPage
         return string.Join(":", bytes.Select(b => b.ToString("x2")));
     }
 
+    private async void OnCloseClicked(object sender, EventArgs e)
+    {
+        _cts?.Cancel();
+        await Navigation.PopModalAsync();
+    }
+
     private async void OnSaveClicked(object sender, EventArgs e)
     {
         var wsUrl = WsUrlEntry.Text?.Trim();

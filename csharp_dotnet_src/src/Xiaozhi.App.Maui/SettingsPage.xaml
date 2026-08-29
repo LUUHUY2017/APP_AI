@@ -102,11 +102,13 @@
             </VerticalStackLayout>
 
             <!-- Action Buttons -->
-            <Grid ColumnDefinitions="*, *" ColumnSpacing="12" Margin="0,15,0,20">
-                <Button Grid.Column="0" Text="🔄 Khôi phục mặc định" BackgroundColor="#222238" TextColor="#ff6b81" 
-                        CornerRadius="10" HeightRequest="48" Clicked="OnResetClicked" />
-                <Button Grid.Column="1" Text="💾 Lưu &amp; Kết nối" BackgroundColor="#6c5ce7" TextColor="#ffffff" 
-                        FontAttributes="Bold" CornerRadius="10" HeightRequest="48" Clicked="OnSaveClicked" />
+            <Grid ColumnDefinitions="*, *, *" ColumnSpacing="8" Margin="0,15,0,25">
+                <Button Grid.Column="0" Text="🔄 Mặc định" BackgroundColor="#222238" TextColor="#ff6b81" 
+                        CornerRadius="10" HeightRequest="48" FontSize="11" Clicked="OnResetClicked" />
+                <Button Grid.Column="1" Text="❌ Đóng" BackgroundColor="#221045" TextColor="#FF5E36" 
+                        CornerRadius="10" HeightRequest="48" FontSize="12" FontAttributes="Bold" BorderColor="#FF5E36" Clicked="OnCloseClicked" />
+                <Button Grid.Column="2" Text="💾 Lưu &amp; Kết nối" BackgroundColor="#bd00ff" TextColor="#ffffff" 
+                        FontAttributes="Bold" CornerRadius="10" HeightRequest="48" FontSize="11" Clicked="OnSaveClicked" />
             </Grid>
         </VerticalStackLayout>
     </ScrollView>

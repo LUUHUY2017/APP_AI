@@ -6,7 +6,7 @@
              ios:Page.UseSafeArea="True"
              BackgroundColor="#070412">
 
-    <Grid RowDefinitions="Auto, *, Auto, Auto" Padding="12,6,12,12" VerticalOptions="FillAndExpand">
+    <Grid x:Name="MainGrid" RowDefinitions="Auto, *, Auto, Auto" Padding="12,6,12,12" VerticalOptions="FillAndExpand">
         <!-- Vibrant Cyberpunk Header Card -->
         <Frame Grid.Row="0" BackgroundColor="#130a2a" BorderColor="#bd00ff" CornerRadius="18" Padding="10,8" HasShadow="False" Margin="0,4,0,8">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
