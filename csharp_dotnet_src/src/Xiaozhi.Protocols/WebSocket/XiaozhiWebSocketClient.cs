@@ -207,8 +207,8 @@ public class XiaozhiWebSocketClient : IProtocol
             waitAttempts++;
         }
 
-        // Nhường 100% quyền xử lý nội dung & cấu hình cho Server Xiaozhi (xiaozhi.me)
-        var msg = new ListenMessage
+        // 1. Gửi lệnh bắt đầu phiên thoại văn bản
+        var startMsg = new ListenMessage
         {
             SessionId = _sessionId,
             Type = "listen",
@@ -216,7 +216,16 @@ public class XiaozhiWebSocketClient : IProtocol
             Mode = "manual",
             Text = text
         };
-        await SendJsonAsync(msg);
+        await SendJsonAsync(startMsg);
+
+        // 2. Gửi lệnh kết thúc phiên để Server Xiaozhi kích hoạt suy nghĩ LLM & phát giọng nói về
+        var stopMsg = new ListenMessage
+        {
+            SessionId = _sessionId,
+            Type = "listen",
+            State = "stop"
+        };
+        await SendJsonAsync(stopMsg);
     }
 
     /// <summary>
