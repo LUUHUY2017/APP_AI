@@ -194,7 +194,7 @@ public class XiaozhiWebSocketClient : IProtocol
     /// </summary>
     public async Task SendTextQueryAsync(string text)
     {
-        if (!IsConnected)
+        if (!IsConnected || _ws == null || _ws.State != System.Net.WebSockets.WebSocketState.Open)
         {
             await ConnectAsync();
         }

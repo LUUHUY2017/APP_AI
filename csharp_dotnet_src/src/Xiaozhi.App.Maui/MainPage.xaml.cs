@@ -316,6 +316,15 @@ public partial class MainPage : ContentPage
 
     private async Task ConnectWithOtaAsync()
     {
+        if (_client != null && _client.IsConnected)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StatusLabel.Text = "✅ Sẵn sàng";
+            });
+            return;
+        }
+
         MainThread.BeginInvokeOnMainThread(() =>
         {
             StatusLabel.Text = "🔄 Đang kiểm tra OTA & kết nối...";
@@ -337,6 +346,11 @@ public partial class MainPage : ContentPage
                 {
                     _wsUrl = actResult.WebSocketUrl;
                     Preferences.Default.Set("lily_ws_url", _wsUrl);
+                }
+
+                if (_client != null)
+                {
+                    await _client.DisposeAsync();
                 }
 
                 _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
