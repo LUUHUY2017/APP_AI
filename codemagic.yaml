@@ -4,16 +4,16 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m1
     scripts:
-      - name: Install .NET 10 SDK
+      - name: Install .NET 8 SDK
         script: |
-          curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 10.0.100
+          curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --version 8.0.400
           export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
           echo "export PATH=\"$HOME/.dotnet:\$PATH\"" >> $CM_ENV
-          dotnet workload install maui-ios --version 10.0.100
+          dotnet workload install maui-ios
       - name: Build MAUI iOS App
         script: |
           export PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"
           cd csharp_dotnet_src
-          dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net10.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false
+          dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false
     artifacts:
-      - csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net10.0-ios/ios-arm64/**/*.ipa
+      - csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
