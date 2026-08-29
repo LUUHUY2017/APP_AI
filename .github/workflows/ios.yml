@@ -98,13 +98,15 @@ jobs:
 
     - name: Automatically Publish IPA and Manifest to GitHub Releases
       uses: softprops/action-gh-release@v2
-      if: always()
+      if: success()
       with:
         tag_name: v1.0.1
         name: "BACKEND AI iOS v1.0.1"
         body: "Bản cập nhật tự động IPA & Manifest từ GitHub Actions CI/CD."
         draft: false
         prerelease: false
+        overwrite: true
+        fail_on_unmatched_files: false
         files: |
           csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
           csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.plist
