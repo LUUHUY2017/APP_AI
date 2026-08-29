@@ -77,14 +77,53 @@ public partial class MainPage : ContentPage
 
     private readonly Concentus.Structs.OpusDecoder _opusDecoder24k = new Concentus.Structs.OpusDecoder(24000, 1);
     private bool _hasReceivedServerAudio = false;
+    private readonly System.IO.MemoryStream _currentAudioBlock = new();
     private readonly System.Collections.Generic.Queue<byte[]> _iosAudioChunkQueue = new();
     private bool _isIosAudioPlaying = false;
 
     private void PlayServerAudioChunkOnIos(byte[] pcmBytes)
     {
+        byte[]? readyBlock = null;
+        lock (_currentAudioBlock)
+        {
+            _currentAudioBlock.Write(pcmBytes, 0, pcmBytes.Length);
+            // Cứ tích lũy đủ 12,000 byte PCM (khoảng 250ms âm thanh 24kHz), xuất thành 1 khối để phát ngay lập tức
+            if (_currentAudioBlock.Length >= 12000)
+            {
+                readyBlock = _currentAudioBlock.ToArray();
+                _currentAudioBlock.SetLength(0);
+            }
+        }
+
+        if (readyBlock != null)
+        {
+            EnqueueAndPlayAudioBlock(readyBlock);
+        }
+    }
+
+    private void FlushAndPlayServerAudioOnIos()
+    {
+        byte[]? remainingBlock = null;
+        lock (_currentAudioBlock)
+        {
+            if (_currentAudioBlock.Length > 0)
+            {
+                remainingBlock = _currentAudioBlock.ToArray();
+                _currentAudioBlock.SetLength(0);
+            }
+        }
+
+        if (remainingBlock != null)
+        {
+            EnqueueAndPlayAudioBlock(remainingBlock);
+        }
+    }
+
+    private void EnqueueAndPlayAudioBlock(byte[] pcmBlock)
+    {
         lock (_iosAudioChunkQueue)
         {
-            _iosAudioChunkQueue.Enqueue(pcmBytes);
+            _iosAudioChunkQueue.Enqueue(pcmBlock);
         }
 
         if (!_isIosAudioPlaying)
@@ -98,12 +137,12 @@ public partial class MainPage : ContentPage
     {
         while (true)
         {
-            byte[]? chunk = null;
+            byte[]? block = null;
             lock (_iosAudioChunkQueue)
             {
                 if (_iosAudioChunkQueue.Count > 0)
                 {
-                    chunk = _iosAudioChunkQueue.Dequeue();
+                    block = _iosAudioChunkQueue.Dequeue();
                 }
                 else
                 {
@@ -112,12 +151,14 @@ public partial class MainPage : ContentPage
                 }
             }
 
-            if (chunk != null && chunk.Length > 0)
+            if (block != null && block.Length > 0)
             {
-                byte[] wavHeader = CreateWavHeader(chunk.Length, 24000, 1, 16);
-                byte[] fullWav = new byte[wavHeader.Length + chunk.Length];
+                byte[] wavHeader = CreateWavHeader(block.Length, 24000, 1, 16);
+                byte[] fullWav = new byte[wavHeader.Length + block.Length];
                 Buffer.BlockCopy(wavHeader, 0, fullWav, 0, wavHeader.Length);
-                Buffer.BlockCopy(chunk, 0, fullWav, wavHeader.Length, chunk.Length);
+                Buffer.BlockCopy(block, 0, fullWav, wavHeader.Length, block.Length);
+
+                double durationMs = (double)block.Length / (24000 * 2) * 1000;
 
                 var tcs = new TaskCompletionSource<bool>();
                 MainThread.BeginInvokeOnMainThread(() =>
@@ -141,14 +182,10 @@ public partial class MainPage : ContentPage
                         tcs.TrySetResult(true);
                     }
                 });
-                await Task.WhenAny(tcs.Task, Task.Delay(250));
+
+                await Task.WhenAny(tcs.Task, Task.Delay((int)Math.Max(50, durationMs - 40)));
             }
         }
-    }
-
-    private void FlushAndPlayServerAudioOnIos()
-    {
-        // Luồng âm thanh real-time đã phát trực tiếp ngay khi gói Opus đầu tiên tới
     }
 
     public static byte[] CreateWavHeader(int pcmDataLength, int sampleRate = 24000, int channels = 1, int bitsPerSample = 16)
@@ -929,8 +966,7 @@ public partial class MainPage : ContentPage
             }
         }
 
-        CurrentMsgLabel.Text = _currentAiStreamText;
-        if (!_hasReceivedServerAudio)
+        if (!_client.IsConnected && !_hasReceivedServerAudio)
         {
             _ = EnqueueSpeechAsync(chunkText);
         }
