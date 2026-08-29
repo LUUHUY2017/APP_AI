@@ -53,8 +53,12 @@ public partial class MainPage : ContentPage
     }
 
     private readonly System.Collections.Concurrent.ConcurrentQueue<string> _debugLogs = new();
-
     private string _lastSentText = string.Empty;
+
+    private string _currentAiStreamText = string.Empty;
+    private Label? _currentAiBubbleLabel = null;
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _speechQueue = new();
+    private bool _isSpeaking = false;
 
     private void SetupClientHandlers()
     {
@@ -89,9 +93,7 @@ public partial class MainPage : ContentPage
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 StatusLabel.Text = "✅ Sẵn sàng";
-                CurrentMsgLabel.Text = text;
-                AddChatMessage(text, isUser: false);
-                _ = SpeakAsync(text);
+                AppendOrAddAiResponse(text);
             });
             await Task.CompletedTask;
         };
@@ -231,15 +233,17 @@ public partial class MainPage : ContentPage
 
     private async void OnDebugLogClicked(object sender, EventArgs e)
     {
-        var logs = string.Join("\n", _debugLogs.ToArray());
+        var arr = _debugLogs.ToArray();
+        Array.Reverse(arr);
+        var logs = string.Join("\n\n", arr);
         if (string.IsNullOrWhiteSpace(logs)) logs = "Chưa có nhật ký kết nối WebSocket nào.";
 
         var editor = new Editor
         {
             Text = logs,
             IsReadOnly = true,
-            TextColor = Color.FromArgb("#00f2fe"),
-            BackgroundColor = Color.FromArgb("#16122c"),
+            TextColor = Color.FromArgb("#00ff9d"),
+            BackgroundColor = Color.FromArgb("#0d071d"),
             FontSize = 11,
             HeightRequest = 480
         };
@@ -247,20 +251,21 @@ public partial class MainPage : ContentPage
         var page = new ContentPage
         {
             Title = "🐞 Debug Log WebSocket",
-            BackgroundColor = Color.FromArgb("#0a0814"),
+            BackgroundColor = Color.FromArgb("#070412"),
             Content = new VerticalStackLayout
             {
                 Padding = new Thickness(14),
                 Spacing = 10,
                 Children =
                 {
-                    new Label { Text = "🐞 Nhật ký Giao tiếp WebSocket Real-time (iOS)", TextColor = Colors.White, FontAttributes = FontAttributes.Bold, FontSize = 15 },
+                    new Label { Text = "🐞 LOG WEBSOCKET REAL-TIME (MỚI NHẤT TRÊN ĐẦU 🔥)", TextColor = Color.FromArgb("#FF5E36"), FontAttributes = FontAttributes.Bold, FontSize = 14 },
                     editor,
                     new Button
                     {
-                        Text = "Đóng Nhật ký",
-                        BackgroundColor = Color.FromArgb("#6c47ff"),
+                        Text = "ĐÓNG NHẬT KÝ",
+                        BackgroundColor = Color.FromArgb("#bd00ff"),
                         TextColor = Colors.White,
+                        FontAttributes = FontAttributes.Bold,
                         Command = new Command(async () => await Navigation.PopModalAsync())
                     }
                 }
@@ -301,22 +306,28 @@ public partial class MainPage : ContentPage
         TextInput.Unfocus();
 
         _lastSentText = text;
+        _currentAiStreamText = string.Empty;
+        _currentAiBubbleLabel = null;
         AddChatMessage(text, isUser: true);
         StatusLabel.Text = "🧠 Đang xử lý...";
         _receivedResponse = false;
 
-        if (_client.IsConnected)
+        try
         {
             await _client.SendTextQueryAsync(text);
+        }
+        catch (Exception ex)
+        {
+            XiaozhiWebSocketClient.Log($"OnSendClicked send error: {ex.Message}");
         }
 
         // Check for iOS App Launcher voice commands
         if (await TryOpenAppByVoiceCommandAsync(text)) return;
 
-        // Wait 1.8 seconds; if no response from server, use smart local fallback & iOS speech!
+        // Cho phép Server 8 giây để phản hồi trước khi dùng fallback
         _ = Task.Run(async () =>
         {
-            await Task.Delay(1800);
+            await Task.Delay(8000);
             if (!_receivedResponse)
             {
                 _receivedResponse = true;
@@ -599,23 +610,73 @@ public partial class MainPage : ContentPage
         return false;
     }
 
-    private async Task SpeakAsync(string text)
+    private void AppendOrAddAiResponse(string chunkText)
     {
-        try
-        {
-            await TextToSpeech.Default.SpeakAsync(text, new SpeechOptions
-            {
-                Volume = _currentVolume,
-                Pitch = 1.1f
-            });
-        }
-        catch { }
+        if (string.IsNullOrWhiteSpace(chunkText)) return;
 
-        // Chế độ Rảnh tay: tự động lắng nghe câu tiếp theo ngay khi Backend trả lời xong.
+        if (string.IsNullOrEmpty(_currentAiStreamText))
+        {
+            _currentAiStreamText = chunkText;
+            _currentAiBubbleLabel = AddChatMessage(_currentAiStreamText, isUser: false);
+        }
+        else
+        {
+            _currentAiStreamText += " " + chunkText;
+            if (_currentAiBubbleLabel != null)
+            {
+                _currentAiBubbleLabel.Text = _currentAiStreamText;
+            }
+            else
+            {
+                _currentAiBubbleLabel = AddChatMessage(_currentAiStreamText, isUser: false);
+            }
+        }
+
+        CurrentMsgLabel.Text = _currentAiStreamText;
+        _ = EnqueueSpeechAsync(chunkText);
+    }
+
+    private async Task EnqueueSpeechAsync(string text)
+    {
+        var cleanText = text.Replace("~", "").Replace("*", "").Replace("_", "").Trim();
+        if (string.IsNullOrWhiteSpace(cleanText)) return;
+
+        _speechQueue.Enqueue(cleanText);
+        if (!_isSpeaking)
+        {
+            await ProcessSpeechQueueAsync();
+        }
+    }
+
+    private async Task ProcessSpeechQueueAsync()
+    {
+        _isSpeaking = true;
+        while (_speechQueue.TryDequeue(out var textToSpeak))
+        {
+            try
+            {
+                await TextToSpeech.Default.SpeakAsync(textToSpeak, new SpeechOptions
+                {
+                    Volume = _currentVolume,
+                    Pitch = 1.0f
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"TTS Exception: {ex.Message}");
+            }
+        }
+        _isSpeaking = false;
+
         if (_handsFree && !_isRecording)
         {
             await StartRecordingAsync();
         }
+    }
+
+    private async Task SpeakAsync(string text)
+    {
+        await EnqueueSpeechAsync(text);
     }
 
     private async void OnPlusClicked(object sender, EventArgs e)
@@ -631,7 +692,7 @@ public partial class MainPage : ContentPage
         }
     }
 
-    private void AddChatMessage(string text, bool isUser)
+    private Label? AddChatMessage(string text, bool isUser)
     {
         if (isUser)
         {
@@ -701,9 +762,12 @@ public partial class MainPage : ContentPage
             container.Children.Add(actionBar);
 
             ChatStack.Children.Add(container);
+            ScrollToBottom(150);
+            return aiText;
         }
 
         ScrollToBottom(150);
+        return null;
     }
 
     private void ScrollToBottom(int delayMs = 150)

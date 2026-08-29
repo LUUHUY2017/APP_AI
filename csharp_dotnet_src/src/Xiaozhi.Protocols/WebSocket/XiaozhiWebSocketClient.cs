@@ -192,8 +192,21 @@ public class XiaozhiWebSocketClient : IProtocol
     /// <summary>
     /// Gửi câu hỏi văn bản trực tiếp (listen: detect)
     /// </summary>
-    public Task SendTextQueryAsync(string text)
+    public async Task SendTextQueryAsync(string text)
     {
+        if (!IsConnected)
+        {
+            await ConnectAsync();
+        }
+
+        // Đảm bảo session đã bắt tay hello xong để lấy SessionId
+        int waitAttempts = 0;
+        while (string.IsNullOrEmpty(_sessionId) && waitAttempts < 10)
+        {
+            await Task.Delay(100);
+            waitAttempts++;
+        }
+
         var msg = new ListenMessage
         {
             SessionId = _sessionId,
@@ -201,7 +214,7 @@ public class XiaozhiWebSocketClient : IProtocol
             State = "detect",
             Text = text
         };
-        return SendJsonAsync(msg);
+        await SendJsonAsync(msg);
     }
 
     /// <summary>
@@ -433,16 +446,17 @@ public class XiaozhiWebSocketClient : IProtocol
                     break;
 
                 case "tts":
-                    if (root.TryGetProperty("state", out var ttsState) && OnTtsStateChanged != null)
+                    if (root.TryGetProperty("state", out var ttsState))
                     {
                         var state = ttsState.GetString() ?? "";
-                        if (state == "sentence_start" && root.TryGetProperty("text", out var sentenceText))
+                        if ((state == "sentence_start" || state == "start") && root.TryGetProperty("text", out var sentenceText))
                         {
                             var s = sentenceText.GetString();
                             if (!string.IsNullOrEmpty(s) && OnLlmResponse != null)
                                 await OnLlmResponse.Invoke(s, null);
                         }
-                        await OnTtsStateChanged.Invoke(state);
+                        if (OnTtsStateChanged != null)
+                            await OnTtsStateChanged.Invoke(state);
                     }
                     break;
 
