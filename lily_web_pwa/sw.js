@@ -1,9 +1,9 @@
-const CACHE_NAME = 'lily-pwa-v5';
+const CACHE_NAME = 'lily-pwa-v6-otp-fix';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css?v=2.0',
-  './js/app.js?v=2.0',
+  './js/app.js?v=2.1',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'

@@ -34,7 +34,7 @@
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="4">
                             <Grid ColumnDefinitions="*, Auto">
-                                <Label Grid.Column="0" Text="Số Serial (MAC):" FontSize="11" TextColor="#a0a0ff" VerticalOptions="Center" />
+                                <Label Grid.Column="0" Text="Serial nội bộ (không nhập web):" FontSize="11" TextColor="#a0a0ff" VerticalOptions="Center" />
                                 <Button Grid.Column="1" Text="📋 Chép" BackgroundColor="#222044" TextColor="#FFDD00" FontSize="10" Padding="4,1" HeightRequest="24" Clicked="OnCopySerialClicked" />
                             </Grid>
                             <Frame BackgroundColor="#0d0b1a" CornerRadius="10" Padding="8,6" HasShadow="False" BorderColor="#4a3e8c">

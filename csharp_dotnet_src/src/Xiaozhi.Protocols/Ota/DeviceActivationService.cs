@@ -95,12 +95,12 @@ public class DeviceActivationService
             request.Headers.Add("Client-Id", deviceId);
             request.Headers.Add("User-Agent", $"{SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}");
             request.Headers.Add("Accept-Language", "zh-CN");
-            request.Headers.Add("Activation-Version", SystemConstants.AppVersion);
+            request.Headers.Add("Activation-Version", SystemConstants.ActivationVersion);
             request.Headers.Add("Mac-Address", macAddress);
             request.Headers.Add("Serial-Number", serialNumber);
             request.Headers.Add("Hmac-Key", hmacKey);
 
-            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {serialNumber}\n  Hmac-Key: {hmacKey}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.AppVersion}\nBody:\n{jsonBody}";
+            result.RawRequest = $"POST {_otaUrl}\nHeaders:\n  Device-Id: {macAddress}\n  Client-Id: {deviceId}\n  Serial-Number: {serialNumber}\n  Hmac-Key: {hmacKey}\n  User-Agent: {SystemConstants.BoardType}/{SystemConstants.AppName}-{SystemConstants.AppVersion}\n  Activation-Version: {SystemConstants.ActivationVersion}\nBody:\n{jsonBody}";
 
             var response = await _httpClient.SendAsync(request);
             var responseBody = await response.Content.ReadAsStringAsync();

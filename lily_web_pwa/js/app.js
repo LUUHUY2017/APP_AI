@@ -8,6 +8,7 @@ const OTA_URL = "https://api.tenclass.net/xiaozhi/ota/";
 const BOARD_TYPE = "esp32s3";
 const APP_NAME = "xiaozhi";
 const APP_VERSION = "1.0.0";
+const ACTIVATION_VERSION = "2";
 
 const DEFAULT_PRESET_MAC = "38:60:77:dc:90:11";
 const DEFAULT_PRESET_TOKEN = "test-token";
@@ -628,11 +629,12 @@ class LilyPWA {
 
   async generateOtp() {
     let mac = this.inputDeviceId?.value?.trim() || CONFIG.deviceId;
-    if (mac === DEFAULT_PRESET_MAC) {
-      const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-      mac = `02:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
-      if (this.inputDeviceId) this.inputDeviceId.value = mac;
+    mac = sanitizeMac(mac);
+    if (!mac) {
+      if (this.otpStatusText) this.otpStatusText.innerText = '❌ MAC không hợp lệ. Hãy nhập đủ 12 ký tự hex.';
+      return;
     }
+    localStorage.setItem('lily_device_id', mac);
     const clientId = this.inputClientId?.value?.trim() || CONFIG.clientId;
     const serial = generateEfuseSerialNumber(mac);
     if (this.otpSerialBox) this.otpSerialBox.innerText = serial;
@@ -656,7 +658,7 @@ class LilyPWA {
       'Client-Id': clientId,
       'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
       'Accept-Language': 'zh-CN',
-      'Activation-Version': APP_VERSION,
+      'Activation-Version': ACTIVATION_VERSION,
       'Serial-Number': serial
     };
 
@@ -683,7 +685,7 @@ class LilyPWA {
       const code = (data.activation && data.activation.code) || data.code || data.activation_code;
       if (code) {
         if (this.otpCodeBox) this.otpCodeBox.innerText = code;
-        if (this.otpStatusText) this.otpStatusText.innerText = `🎉 Đã tạo mã OTP: ${code}. Hãy mở xiaozhi.me để nhập mã!`;
+        if (this.otpStatusText) this.otpStatusText.innerText = `🎉 Mã OTP: ${code}. Chỉ nhập mã OTP này trên xiaozhi.me; không nhập Serial.`;
         if (this.btnOpenXiaozhi) {
           this.btnOpenXiaozhi.classList.remove('disabled');
           this.btnOpenXiaozhi.href = `https://xiaozhi.me/active?code=${code}`;
@@ -722,6 +724,7 @@ class LilyPWA {
             'Device-Id': mac,
             'Client-Id': clientId,
             'User-Agent': `${BOARD_TYPE}/${APP_NAME}-${APP_VERSION}`,
+            'Activation-Version': ACTIVATION_VERSION,
             'Serial-Number': serial
           },
           body: JSON.stringify({
