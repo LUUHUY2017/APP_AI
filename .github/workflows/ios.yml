@@ -7,7 +7,9 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14
+    # .NET 8 MAUI's current iOS workload exposes iOS 18 UIKit bindings,
+    # therefore the build host must provide an iOS 18+ SDK (Xcode 16+).
+    runs-on: macos-15
 
     steps:
     - name: Checkout Repository
@@ -17,6 +19,12 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
+
+    - name: Verify Xcode and iOS SDK
+      run: |
+        xcodebuild -version
+        xcrun --sdk iphoneos --show-sdk-version
+        dotnet --version
 
     - name: Install .NET MAUI Workloads
       run: |
