@@ -37,8 +37,61 @@ jobs:
         cd csharp_dotnet_src
         dotnet publish src/Xiaozhi.App.Maui/Xiaozhi.App.Maui.csproj -c Release -f net8.0-ios -r ios-arm64 /p:ArchiveOnBuild=true /p:BuildIpa=true /p:CheckEolWorkloads=false /p:EnableCodeSigning=false
 
-    - name: Upload iOS IPA Artifact
+    - name: Generate iOS OTA manifest.plist
+      run: |
+        cat <<EOF > csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/publish/manifest.plist
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>items</key>
+          <array>
+            <dict>
+              <key>assets</key>
+              <array>
+                <dict>
+                  <key>kind</key>
+                  <string>software-package</string>
+                  <key>url</key>
+                  <string>https://github.com/LUUHUY2017/APP_AI/releases/latest/download/Xiaozhi.Lily.App.ipa</string>
+                </dict>
+              </array>
+              <key>metadata</key>
+              <dict>
+                <key>bundle-identifier</key>
+                <string>com.xiaozhi.ai.lily</string>
+                <key>bundle-version</key>
+                <string>1.0.1</string>
+                <key>kind</key>
+                <string>software</string>
+                <key>title</key>
+                <string>BACKEND AI</string>
+              </dict>
+            </dict>
+          </array>
+        </dict>
+        </plist>
+        EOF
+
+    - name: Upload iOS IPA and OTA Manifest Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: Lily-AI-iOS-App
-        path: csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
+        path: |
+          csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
+          csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.plist
+
+    - name: Automatically Publish IPA and Manifest to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      if: always()
+      with:
+        tag_name: v1.0.1
+        name: "BACKEND AI iOS v1.0.1"
+        body: "Bản cập nhật tự động IPA & Manifest từ GitHub Actions CI/CD."
+        draft: false
+        prerelease: false
+        files: |
+          csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.ipa
+          csharp_dotnet_src/src/Xiaozhi.App.Maui/bin/Release/net8.0-ios/ios-arm64/**/*.plist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

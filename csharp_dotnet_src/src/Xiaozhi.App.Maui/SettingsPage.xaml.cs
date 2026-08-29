@@ -277,6 +277,12 @@ public partial class SettingsPage : ContentPage
         return string.Join(":", bytes.Select(b => b.ToString("x2")));
     }
 
+    private async void OnCheckAppUpdateClicked(object sender, EventArgs e)
+    {
+        var service = new Services.OtaAutoUpdateService();
+        await service.CheckForUpdatesAsync(this, silentIfLatest: false);
+    }
+
     private async void OnCloseClicked(object sender, EventArgs e)
     {
         _cts?.Cancel();

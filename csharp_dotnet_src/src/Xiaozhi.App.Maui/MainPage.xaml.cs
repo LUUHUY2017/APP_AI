@@ -224,6 +224,19 @@ public partial class MainPage : ContentPage
         };
     }
 
+    private readonly Services.OtaAutoUpdateService _appUpdateService = new();
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        // Tự động kiểm tra bản cập nhật mới (OTA Auto-Update) khi mở App trên iOS
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(2500);
+            await _appUpdateService.CheckForUpdatesAsync(this, silentIfLatest: true);
+        });
+    }
+
     private async Task ConnectWithOtaAsync()
     {
         MainThread.BeginInvokeOnMainThread(() =>
