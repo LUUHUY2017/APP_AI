@@ -8,6 +8,7 @@ namespace Xiaozhi.Mcp.Tools;
 
 public class SystemAppTool
 {
+    /// <summary>Liệt kê tối đa 30 process có cửa sổ hiển thị cho người dùng.</summary>
     public string[] ListRunningApps()
     {
         return Process.GetProcesses()
@@ -17,6 +18,7 @@ public class SystemAppTool
             .ToArray();
     }
 
+    /// <summary>Quét shortcut Start Menu/Desktop để suy ra danh sách ứng dụng đã cài.</summary>
     public List<string> FindInstalledApps()
     {
         var appNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -48,6 +50,7 @@ public class SystemAppTool
         return appNames.Take(50).ToList();
     }
 
+    /// <summary>Mở đường dẫn/tên ứng dụng bằng Windows shell; trả false nếu cả hai cách đều lỗi.</summary>
     public bool LaunchApp(string appPathOrName)
     {
         try
@@ -81,6 +84,7 @@ public class SystemAppTool
         }
     }
 
+    /// <summary>Tìm tất cả process trùng tên (có thể kèm .exe) và yêu cầu kết thúc chúng.</summary>
     public bool KillApp(string processName)
     {
         try
@@ -99,6 +103,7 @@ public class SystemAppTool
         }
     }
 
+    /// <summary>Tổng hợp phiên bản Windows, bộ nhớ managed của app và dung lượng các ổ sẵn sàng.</summary>
     public string GetSystemStatus()
     {
         try

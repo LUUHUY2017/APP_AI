@@ -42,6 +42,7 @@ public class XiaozhiWebSocketClient : IProtocol
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "XiaozhiLily", "ws_traffic.log");
 
+    /// <summary>Ghi log chẩn đoán ra Debug và file tạm mà không làm gián đoạn luồng chính.</summary>
     public static void Log(string msg)
     {
         try
@@ -69,6 +70,7 @@ public class XiaozhiWebSocketClient : IProtocol
 
     public bool IsConnected => _ws?.State == WebSocketState.Open;
 
+    /// <summary>Lưu endpoint/token/danh tính và chuẩn bị ClientWebSocket chưa kết nối.</summary>
     public XiaozhiWebSocketClient(string serverUrl, string token, string deviceId, string clientId)
     {
         _serverUrl = serverUrl;
@@ -453,6 +455,7 @@ public class XiaozhiWebSocketClient : IProtocol
         }
     }
 
+    /// <summary>Đóng socket nội bộ nếu còn ở trạng thái có thể gửi close frame.</summary>
     private async Task CloseInternalAsync()
     {
         try
@@ -465,6 +468,7 @@ public class XiaozhiWebSocketClient : IProtocol
         catch { }
     }
 
+    /// <summary>Hủy receive loop, đóng socket chủ động và phát trạng thái ngắt kết nối.</summary>
     public async Task DisconnectAsync()
     {
         _cts?.Cancel();
@@ -484,6 +488,7 @@ public class XiaozhiWebSocketClient : IProtocol
         }
     }
 
+    /// <summary>Ngắt kết nối rồi dispose socket cùng cancellation source của client.</summary>
     public async ValueTask DisposeAsync()
     {
         _isDisposed = true;

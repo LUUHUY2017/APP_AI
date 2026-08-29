@@ -33,6 +33,7 @@ public class GlobalShortcutPlugin : IPlugin
     private IntPtr _hWnd;
     private HwndSource? _hwndSource;
 
+    /// <summary>Đăng ký HWND, gắn message hook và chiếm các tổ hợp Ctrl+J/K/Q.</summary>
     public void RegisterWindow(IntPtr hWnd)
     {
         // Gắn hook vào message loop của cửa sổ để nhận WM_HOTKEY từ Windows.
@@ -45,6 +46,7 @@ public class GlobalShortcutPlugin : IPlugin
         RegisterHotKey(_hWnd, HOTKEY_ID_Q, MOD_CONTROL, VK_Q); // Ctrl + Q
     }
 
+    /// <summary>Nhận WM_HOTKEY, ánh xạ ID native sang event nghiệp vụ và đánh dấu đã xử lý.</summary>
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         // wParam chứa ID đã đăng ký, không phải mã phím trực tiếp.
@@ -70,11 +72,13 @@ public class GlobalShortcutPlugin : IPlugin
         return IntPtr.Zero;
     }
 
+    /// <summary>Không cần khởi tạo thêm; hotkey chỉ đăng ký khi đã có HWND.</summary>
     public Task InitializeAsync()
     {
         return Task.CompletedTask;
     }
 
+    /// <summary>Hủy đăng ký hotkey và tháo hook khỏi message loop của cửa sổ.</summary>
     public Task ShutdownAsync()
     {
         // Bắt buộc unregister và tháo hook để không giữ tài nguyên native sau khi đóng app.

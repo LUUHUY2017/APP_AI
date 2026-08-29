@@ -15,6 +15,8 @@ using Xiaozhi.Protocols.WebSocket;
 
 namespace Xiaozhi.App.Wpf.ViewModels;
 
+// INotifyPropertyChanged là "hợp đồng" của MVVM: ViewModel phải phát sự kiện khi một property đổi.
+// Nhờ đó giao diện không cần liên tục hỏi lại trạng thái mà chỉ phản ứng đúng lúc có thay đổi.
 public class MainViewModel : INotifyPropertyChanged
 {
     // Các dịch vụ dài hạn của một phiên chạy: mạng, codec, micro/loa, VAD và chuyển văn bản thành audio.
@@ -39,14 +41,28 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool IsConnected
     {
+        // get trả trạng thái kết nối hiện tại cho UI hoặc lớp gọi.
         get => _isConnected;
-        set { _isConnected = value; OnPropertyChanged(); }
+        set
+        {
+            // Lưu trạng thái mới vào backing field.
+            _isConnected = value;
+
+            // Không truyền tên property: CallerMemberName tự suy ra tên "IsConnected".
+            OnPropertyChanged();
+        }
     }
 
     public bool IsRecording
     {
         get => _isRecording;
-        set { _isRecording = value; OnPropertyChanged(); }
+        set
+        {
+            // Property này chỉ công bố trạng thái cho UI; nó không trực tiếp mở/tắt micro.
+            // Micro thật được điều khiển bởi _audioService.StartRecording/StopRecording.
+            _isRecording = value;
+            OnPropertyChanged();
+        }
     }
 
     public bool IsSpeaking
@@ -64,7 +80,13 @@ public class MainViewModel : INotifyPropertyChanged
     public string StatusText
     {
         get => _statusText;
-        set { _statusText = value; OnPropertyChanged(); }
+        set
+        {
+            _statusText = value;
+
+            // MainWindow nhận event này và chép StatusText sang StatusLabel.Text.
+            OnPropertyChanged();
+        }
     }
 
     public string CurrentChatMessage
@@ -144,6 +166,7 @@ public class MainViewModel : INotifyPropertyChanged
         catch { }
     }
 
+    /// <summary>Điểm khởi tạo công khai của ViewModel; hiện chỉ bảo đảm kết nối server.</summary>
     public async Task InitializeAsync()
     {
         await EnsureConnectedAsync();
@@ -361,35 +384,63 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task StartListeningAsync()
     {
-        // Thứ tự quan trọng: bảo đảm mạng -> reset VAD -> báo server -> mở micro.
-        if (!await EnsureConnectedAsync()) return;
+        // BƯỚC 1: Phải có WebSocket trước khi mở micro.
+        // "await" chờ kết nối nhưng không khóa UI thread, nên cửa sổ vẫn phản hồi bình thường.
+        // Nếu kết nối thất bại, return ngăn việc thu âm vô ích vì không có nơi nhận audio.
+        if (!await EnsureConnectedAsync())
+            return;
 
+        // BƯỚC 2: Xóa bộ đếm giọng nói/im lặng của câu trước.
+        // Nếu không reset, VAD có thể dùng trạng thái cũ và kết thúc nhầm câu mới.
         _vad.Reset();
+
+        // BƯỚC 3: Cho phép callback OnAudioCaptured xử lý các buffer micro sắp nhận.
+        // Đây là cờ nghiệp vụ nội bộ, khác với IsRecording dùng để thông báo cho UI.
         _isListening = true;
+
+        // BƯỚC 4: Công bố trạng thái mới. Mỗi phép gán bên dưới gọi OnPropertyChanged(),
+        // sau đó MainWindow đổi màu nút, chạy animation và cập nhật các nhãn.
         IsRecording = true;
         IsSpeaking = false;
         StatusText = "🎤 Đang nghe...";
         CurrentChatMessage = "🎤 Đang lắng nghe... Nói xong AI sẽ tự động gửi.";
+
+        // BƯỚC 5: Hủy các timer thuộc phiên trả lời trước để chúng không sửa UI giữa lúc đang thu.
         _ttsResetTimer?.Stop();
         _requestTimeoutTimer?.Stop();
 
+        // BƯỚC 6: Báo server bắt đầu một lượt nói mới. Lệnh này CHƯA mở micro;
+        // nó chỉ gửi message điều khiển "listen/start" qua WebSocket.
+        // Dấu ! khẳng định với compiler rằng client không null vì bước 1 đã kết nối thành công.
         await _protocolClient!.StartListeningAsync(mode: "manual");
+
+        // BƯỚC 7: Mở micro Windows thật sự. NAudio sẽ phát OnAudioRecorded cho từng buffer PCM;
+        // constructor đã nối event đó với OnAudioCaptured để chạy VAD -> Opus -> WebSocket.
         _audioService.StartRecording();
     }
 
     public async Task StopListeningAsync()
     {
         // Đóng micro trước, sau đó báo server kết thúc câu để kích hoạt STT/LLM/TTS.
+        // Guard clause tránh gửi stop hai lần khi VAD và thao tác người dùng xảy ra gần nhau.
         if (!_isListening) return;
+
+        // Chặn OnAudioCaptured gửi thêm buffer ngay từ thời điểm này.
         _isListening = false;
+
+        // Dừng và Dispose thiết bị thu để Windows nhả micro.
         _audioService.StopRecording();
+
+        // Phát PropertyChanged để giao diện tắt animation thu và hiện trạng thái xử lý.
         IsRecording = false;
         StatusText = "🧠 Đang xử lý...";
         CurrentChatMessage = "⏳ Đang xử lý câu trả lời...";
 
+        // Nếu server không phản hồi trong 15 giây, timer sẽ đưa UI về trạng thái sẵn sàng.
         _requestTimeoutTimer?.Stop();
         _requestTimeoutTimer?.Start();
 
+        // Message stop đánh dấu cuối câu; server từ đây mới chạy STT -> LLM -> TTS.
         if (_protocolClient?.IsConnected == true)
             await _protocolClient.StopListeningAsync();
     }
@@ -440,7 +491,20 @@ public class MainViewModel : INotifyPropertyChanged
             await _protocolClient.SendAbortAsync("user_interrupt");
     }
 
+    // Các đối tượng quan sát ViewModel (ở đây là MainWindow) đăng ký vào event này.
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    /// <summary>
+    /// Thông báo một property của ViewModel vừa thay đổi để giao diện đọc lại giá trị mới.
+    /// </summary>
+    /// <param name="name">
+    /// Tên property thay đổi. CallerMemberName tự điền tên hàm/property gọi nó,
+    /// ví dụ gọi OnPropertyChanged() trong setter IsRecording sẽ tạo tên "IsRecording".
+    /// </param>
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    {
+        // ?. bảo đảm chỉ Invoke khi đã có ít nhất một subscriber; nếu chưa có thì bỏ qua an toàn.
+        // "this" là ViewModel phát event; EventArgs mang tên property sang phía nhận.
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
 }

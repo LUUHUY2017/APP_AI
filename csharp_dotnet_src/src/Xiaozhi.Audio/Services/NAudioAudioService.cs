@@ -19,11 +19,13 @@ public class NAudioAudioService : IAudioService
     public bool IsRecording { get; private set; }
     public bool IsPlaying { get; private set; }
 
+    /// <summary>Tạo service và chuẩn bị pipeline loa ngay để sẵn sàng nhận TTS.</summary>
     public NAudioAudioService()
     {
         InitializePlayback();
     }
 
+    /// <summary>Tạo buffer PCM 24 kHz và WaveOut chạy nền để phát TTS liên tục.</summary>
     private void InitializePlayback()
     {
         // Server TTS output is 24kHz, 16-bit, Mono
@@ -40,6 +42,7 @@ public class NAudioAudioService : IAudioService
         _waveOut.Play();
     }
 
+    /// <summary>Mở micro mặc định bằng WASAPI, fallback WaveIn, rồi phát từng buffer PCM.</summary>
     public void StartRecording()
     {
         if (IsRecording) return;
@@ -114,6 +117,7 @@ public class NAudioAudioService : IAudioService
         }
     }
 
+    /// <summary>Chuẩn hóa audio thiết bị về PCM16 mono 16 kHz.</summary>
     private byte[] ResampleToPcm16k(byte[] inBuffer, int bytesRecorded, WaveFormat inFormat, WaveFormat targetFormat)
     {
         // WASAPI thường trả định dạng thiết bị (hay float/stereo/48 kHz); server cần PCM16 mono 16 kHz.
@@ -157,6 +161,7 @@ public class NAudioAudioService : IAudioService
         }
     }
 
+    /// <summary>Dừng, dispose và nhả thiết bị micro hiện tại.</summary>
     public void StopRecording()
     {
         // Dispose thiết bị để Windows nhả micro và lần thu sau có thể khởi tạo sạch.
@@ -174,6 +179,7 @@ public class NAudioAudioService : IAudioService
         }
     }
 
+    /// <summary>Đưa PCM TTS vào buffer mà WaveOut đang phát nền.</summary>
     public void PlayAudio(byte[] pcmData)
     {
         // Chỉ thêm dữ liệu vào buffer; WaveOutEvent đã chạy nền và tự lấy mẫu để phát.
@@ -184,12 +190,14 @@ public class NAudioAudioService : IAudioService
         }
     }
 
+    /// <summary>Xóa audio chưa phát để ngắt câu trả lời ngay.</summary>
     public void StopPlayback()
     {
         _bufferedWaveProvider?.ClearBuffer();
         IsPlaying = false;
     }
 
+    /// <summary>Đổi phần trăm âm lượng sang khoảng 0..1 của NAudio.</summary>
     public void SetVolume(int volumePercent)
     {
         _volume = Math.Clamp(volumePercent / 100f, 0f, 1f);
@@ -199,6 +207,7 @@ public class NAudioAudioService : IAudioService
         }
     }
 
+    /// <summary>Đóng cả pipeline thu và phát khi service hết vòng đời.</summary>
     public void Dispose()
     {
         StopRecording();

@@ -26,6 +26,10 @@ public partial class MainWindow : Window
         // Nạp cây điều khiển từ MainWindow.xaml rồi lấy ViewModel đã khai báo trong DataContext.
         InitializeComponent();
         _vm = (MainViewModel)DataContext;
+
+        // Đăng ký hai "kênh" thông báo từ ViewModel:
+        // PropertyChanged dành cho trạng thái đơn (đang thu, đang nói, nội dung nhãn...).
+        // MessageAdded dành cho một chat message mới cần tạo thành bong bóng trên giao diện.
         _vm.PropertyChanged += Vm_PropertyChanged;
         _vm.MessageAdded += OnMessageAdded;
         Loaded += async (s, e) =>
@@ -52,6 +56,8 @@ public partial class MainWindow : Window
         // Callback mạng/audio có thể chạy ở luồng nền; Dispatcher đưa mọi thay đổi về UI thread.
         Dispatcher.Invoke(() =>
         {
+            // e.PropertyName chính là tên do OnPropertyChanged tạo ra ở ViewModel.
+            // nameof(...) tránh chuỗi viết tay: đổi tên property bằng refactor thì code vẫn đúng.
             switch (e.PropertyName)
             {
                 case nameof(_vm.StatusText):
@@ -196,6 +202,7 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    /// <summary>Nếu con trỏ rời nút sau một lần nhấn giữ, dừng thu giống thao tác thả chuột.</summary>
     private void TalkBtn_MouseLeave(object sender, MouseEventArgs e)
     {
         _pressTimer.Stop();
@@ -205,11 +212,13 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Chuyển thao tác bấm nút Gửi về cùng một hàm xử lý nội dung ô nhập.</summary>
     private void SendText_Click(object sender, RoutedEventArgs e)
     {
         SendCurrentText();
     }
 
+    /// <summary>Bắt Enter sớm, kể cả khi IME tiếng Việt đang xử lý phím.</summary>
     private void TxtInput_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         var effectiveKey = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
@@ -220,6 +229,7 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Fallback bắt Enter ở sự kiện KeyDown thông thường.</summary>
     private void TxtInput_KeyDown(object sender, KeyEventArgs e)
     {
         var effectiveKey = e.Key == Key.ImeProcessed ? e.ImeProcessedKey : e.Key;
@@ -241,6 +251,7 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Chuyển thao tác bấm nút hủy thành lệnh abort bất đồng bộ trên ViewModel.</summary>
     private void AbortBtn_Click(object sender, MouseButtonEventArgs e)
     {
         _ = _vm.AbortAsync();

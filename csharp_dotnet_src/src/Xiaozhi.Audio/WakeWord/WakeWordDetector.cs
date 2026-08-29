@@ -17,12 +17,14 @@ public class WakeWordDetector : IDisposable
     public event Action<string>? OnKeywordDetected;
     public bool IsEnabled { get; set; } = true;
 
+    /// <summary>Chọn thư mục model mặc định hoặc được truyền vào, sau đó thử nạp SherpaOnnx.</summary>
     public WakeWordDetector(string? modelDir = null)
     {
         _modelDir = modelDir ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "models");
         InitializeModel();
     }
 
+    /// <summary>Kiểm tra đủ file model, cấu hình keyword spotter và tạo online stream.</summary>
     private void InitializeModel()
     {
         try
@@ -58,6 +60,7 @@ public class WakeWordDetector : IDisposable
         }
     }
 
+    /// <summary>Đổi PCM16 sang float, đẩy vào model và phát event khi nhận được keyword.</summary>
     public void ProcessAudio(byte[] pcmData)
     {
         if (!IsEnabled || !_isRunning || _spotter == null || _stream == null) return;
@@ -82,6 +85,7 @@ public class WakeWordDetector : IDisposable
         }
     }
 
+    /// <summary>Giải phóng stream và model native của SherpaOnnx.</summary>
     public void Dispose()
     {
         _stream?.Dispose();

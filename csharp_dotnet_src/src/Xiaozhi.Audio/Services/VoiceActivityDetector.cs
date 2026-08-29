@@ -23,6 +23,7 @@ public class VoiceActivityDetector
     public double SilenceTimeoutMs { get; set; } = 800; // 800ms im lặng -> tự ngắt & gửi câu hỏi
     public double MaxListeningTimeoutMs { get; set; } = 8000; // 8s không nói gì -> tự ngắt
 
+    /// <summary>Xóa timer/trạng thái cũ và bắt đầu đo thời gian cho một lượt nghe mới.</summary>
     public void Reset()
     {
         _silenceTimer.Reset();
@@ -31,6 +32,9 @@ public class VoiceActivityDetector
         _hasSpoken = false;
     }
 
+    /// <summary>
+    /// Tính RMS của buffer PCM, học noise floor và phát event bắt đầu/kết thúc giọng nói.
+    /// </summary>
     public void ProcessPcm(byte[] pcmData)
     {
         if (pcmData.Length < 2) return;

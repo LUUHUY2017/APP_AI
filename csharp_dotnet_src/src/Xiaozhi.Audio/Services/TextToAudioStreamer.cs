@@ -18,6 +18,9 @@ public class TextToAudioStreamer
     private readonly OpusCodec _opusCodec = new();
     private static readonly HttpClient _httpClient = new();
 
+    /// <summary>
+    /// Đọc câu text thành tiếng Việt, đóng gói PCM thành Opus và giả lập một lượt nói qua WebSocket.
+    /// </summary>
     public async Task StreamTextAsAudioAsync(XiaozhiWebSocketClient client, string text)
     {
         if (string.IsNullOrWhiteSpace(text) || !client.IsConnected) return;
@@ -81,6 +84,7 @@ public class TextToAudioStreamer
         }
     }
 
+    /// <summary>Tải từng đoạn MP3 từ dịch vụ TTS, đổi sang PCM 16 kHz và ghép theo đúng thứ tự.</summary>
     private async Task<byte[]> FetchVietnameseTtsPcmAsync(string text)
     {
         var chunks = SplitTextIntoChunks(text, 140);
@@ -115,6 +119,7 @@ public class TextToAudioStreamer
         return combinedPcmMs.ToArray();
     }
 
+    /// <summary>Chia văn bản theo dấu câu và từ, bảo đảm mỗi đoạn không vượt quá giới hạn TTS.</summary>
     private List<string> SplitTextIntoChunks(string text, int maxChunkSize)
     {
         var result = new List<string>();
@@ -172,6 +177,7 @@ public class TextToAudioStreamer
         return result;
     }
 
+    /// <summary>Giải mã byte MP3 và resample thành PCM 16-bit, mono, 16 kHz mà server yêu cầu.</summary>
     private byte[] ConvertMp3ToPcm16k(byte[] mp3Bytes)
     {
         try

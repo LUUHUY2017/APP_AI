@@ -30,6 +30,7 @@ public class ConfigManager
         Efuse = LoadOrCreateEfuse();
     }
 
+    /// <summary>Đọc config người dùng hoặc tạo/lưu cấu hình mặc định khi chưa có.</summary>
     private AppConfig LoadOrCreate()
     {
         // Ưu tiên cấu hình người dùng trong AppData; lỗi đọc/JSON sẽ quay về mặc định an toàn.
@@ -48,6 +49,7 @@ public class ConfigManager
         return config;
     }
 
+    /// <summary>Đọc efuse theo thứ tự AppData, thư mục build, rồi tự tạo mới.</summary>
     private EfuseConfig LoadOrCreateEfuse()
     {
         // Thứ tự tìm: AppData -> file đi kèm bản build -> tự tạo fingerprint mới.
@@ -74,6 +76,7 @@ public class ConfigManager
         return defaultEfuse;
     }
 
+    /// <summary>Tạo endpoint, danh tính và wake-word options mặc định của ứng dụng.</summary>
     private AppConfig CreateDefault()
     {
         return new AppConfig
@@ -101,6 +104,7 @@ public class ConfigManager
         };
     }
 
+    /// <summary>Tạo efuse mặc định từ MAC cùng serial và HMAC được sinh cục bộ.</summary>
     private EfuseConfig CreateDefaultEfuse()
     {
         var mac = Config?.SystemOptions?.DeviceId ?? "38:60:77:dc:90:11";
@@ -114,6 +118,7 @@ public class ConfigManager
         };
     }
 
+    /// <summary>Serialize config vào AppData và cập nhật snapshot đang dùng trong bộ nhớ.</summary>
     public void SaveConfig(AppConfig config)
     {
         // Ghi JSON dễ đọc và cập nhật ngay đối tượng Config đang được các module sử dụng.
@@ -127,6 +132,7 @@ public class ConfigManager
         catch { }
     }
 
+    /// <summary>Serialize efuse vào AppData và cập nhật snapshot đang dùng trong bộ nhớ.</summary>
     public void SaveEfuse(EfuseConfig efuse)
     {
         try
@@ -139,6 +145,7 @@ public class ConfigManager
         catch { }
     }
 
+    /// <summary>Lấy MAC đã định dạng của card mạng đang hoạt động đầu tiên.</summary>
     public static string GetMacAddress()
     {
         // Chọn card mạng đang hoạt động đầu tiên, bỏ loopback và địa chỉ toàn số 0.
