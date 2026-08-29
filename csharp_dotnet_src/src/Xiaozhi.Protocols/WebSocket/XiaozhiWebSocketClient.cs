@@ -207,7 +207,7 @@ public class XiaozhiWebSocketClient : IProtocol
             waitAttempts++;
         }
 
-        // 1. Gửi lệnh bắt đầu phiên thoại văn bản
+        // 1. Gửi lệnh bắt đầu phiên thoại văn bản kèm câu hỏi
         var startMsg = new ListenMessage
         {
             SessionId = _sessionId,
@@ -217,6 +217,9 @@ public class XiaozhiWebSocketClient : IProtocol
             Text = text
         };
         await SendJsonAsync(startMsg);
+
+        // Chờ 300ms để Server Xiaozhi nạp câu hỏi vào bộ nhớ pipeline trước khi gửi tín hiệu chốt
+        await Task.Delay(300);
 
         // 2. Gửi lệnh kết thúc phiên để Server Xiaozhi kích hoạt suy nghĩ LLM & phát giọng nói về
         var stopMsg = new ListenMessage
