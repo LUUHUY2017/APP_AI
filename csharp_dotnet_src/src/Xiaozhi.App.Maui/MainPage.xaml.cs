@@ -87,8 +87,8 @@ public partial class MainPage : ContentPage
         lock (_currentAudioBlock)
         {
             _currentAudioBlock.Write(pcmBytes, 0, pcmBytes.Length);
-            // Cứ tích lũy đủ 12,000 byte PCM (khoảng 250ms âm thanh 24kHz), xuất thành 1 khối để phát ngay lập tức
-            if (_currentAudioBlock.Length >= 12000)
+            // Tích lũy 3,840 byte PCM (chỉ 80ms âm thanh 24kHz), phát cực nhanh ngay lập tức
+            if (_currentAudioBlock.Length >= 3840)
             {
                 readyBlock = _currentAudioBlock.ToArray();
                 _currentAudioBlock.SetLength(0);
