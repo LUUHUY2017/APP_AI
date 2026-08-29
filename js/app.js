@@ -472,7 +472,7 @@ class LilyPWA {
   }
 
   appendMessage(content, role = 'user') {
-    if (!this.chatContainer) return;
+    if (!this.chatContainer) return null;
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
     if (role === 'user') {
@@ -489,6 +489,80 @@ class LilyPWA {
     if (this.chatWrapper) {
       this.chatWrapper.scrollTo({ top: this.chatWrapper.scrollHeight, behavior: 'smooth' });
     }
+    return bubble;
+  }
+
+  appendOrUpdateAiResponse(chunkText) {
+    if (!chunkText || !chunkText.trim()) return;
+    const text = chunkText.trim();
+    if (!this.currentAiStreamText) {
+      this.currentAiStreamText = text;
+      this.currentAiBubble = this.appendMessage(this.currentAiStreamText, 'ai');
+    } else {
+      this.currentAiStreamText += " " + text;
+      if (this.currentAiBubble) {
+        const textEl = this.currentAiBubble.querySelector('.bubble-text');
+        if (textEl) textEl.innerHTML = this.currentAiStreamText.replace(/\n/g, '<br>');
+      } else {
+        this.currentAiBubble = this.appendMessage(this.currentAiStreamText, 'ai');
+      }
+    }
+    if (this.currentMsgBar) this.currentMsgBar.innerText = this.currentAiStreamText;
+    this.enqueueSpeech(text);
+  }
+
+  enqueueSpeech(text) {
+    const clean = text.replace(/<[^>]*>/g, '').replace(/[*_~#]/g, '').trim();
+    if (!clean) return;
+    if (!this.speechQueue) this.speechQueue = [];
+    this.speechQueue.push(clean);
+    if (!this.isSpeakingQueue) {
+      this.processSpeechQueue();
+    }
+  }
+
+  processSpeechQueue() {
+    if (!this.speechQueue || this.speechQueue.length === 0) {
+      this.isSpeakingQueue = false;
+      this.setStatus('✨ Lily AI Sẵn sàng', true);
+      if (this.handsFree) setTimeout(() => this.startRecording(), 600);
+      return;
+    }
+    this.isSpeakingQueue = true;
+    const textToSpeak = this.speechQueue.shift();
+    if (!('speechSynthesis' in window)) {
+      this.processSpeechQueue();
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = 'vi-VN';
+    utterance.rate = 1.0;
+    utterance.pitch = 0.78; // Hạ tông giọng thành Giọng Nam trầm ấm
+
+    const voices = window.speechSynthesis.getVoices();
+    // Ưu tiên chọn giọng Nam tiếng Việt hoặc giọng Nam hệ thống
+    const maleVoice = voices.find(v => v && v.lang && (v.lang.includes('vi') || v.lang.includes('VN')) && (v.name.includes('Male') || v.name.includes('Nam') || v.name.includes('Minh') || v.name.includes('An')));
+    const viVoice = voices.find(v => v && v.lang && (v.lang.includes('vi') || v.lang.includes('VN')));
+    if (maleVoice) {
+      utterance.voice = maleVoice;
+    } else if (viVoice) {
+      utterance.voice = viVoice;
+    }
+
+    utterance.onstart = () => {
+      this.setSpeaking(true);
+      this.setStatus('🌸 Lily đang nói...', true);
+    };
+    utterance.onend = () => {
+      this.setSpeaking(false);
+      this.processSpeechQueue();
+    };
+    utterance.onerror = () => {
+      this.setSpeaking(false);
+      this.processSpeechQueue();
+    };
+
+    window.speechSynthesis.speak(utterance);
   }
 
   sendTextMessage() {
@@ -504,10 +578,14 @@ class LilyPWA {
     if (!userText || !userText.trim()) return;
     const cleanPrompt = userText.trim();
     
+    this.currentAiStreamText = "";
+    this.currentAiBubble = null;
+    this.wsResponseReceived = false;
+
     this.setStatus('🌸 Lily đang suy nghĩ...', true);
     if (this.currentMsgBar) this.currentMsgBar.innerText = '🌸 Lily đang thấu hiểu và phản hồi...';
 
-    // Bắn song song WebSocket tới Server Xiaozhi nếu kết nối đang mở
+    // Bắn WebSocket tới Server Xiaozhi nếu kết nối đang mở -> Sử dụng 100% AI & Cấu hình từ Server Xiaozhi
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       try {
         this.ws.send(JSON.stringify({
@@ -517,9 +595,11 @@ class LilyPWA {
           text: cleanPrompt
         }));
       } catch (e) {}
+      // Nhường toàn bộ quyền phản hồi cho Server Xiaozhi (Model, Prompt & Voice cài trên xiaozhi.me)
+      return;
     }
 
-    // Lưu vào bộ nhớ ngữ cảnh đa lượt (Multi-turn Context Memory)
+    // Chỉ dùng AI Cloud dự phòng (Groq/DeepSeek) KHI KHÔNG KẾT NỐI ĐƯỢC Server Xiaozhi
     this.history.push({ role: "user", content: cleanPrompt });
     if (this.history.length > 12) {
       this.history = [this.history[0], ...this.history.slice(-10)];
@@ -793,10 +873,19 @@ class LilyPWA {
           try {
             const msg = JSON.parse(event.data);
             if (msg.session_id) this.sessionId = msg.session_id;
-            if (msg.type === 'stt' && msg.text && this.currentMsgBar) this.currentMsgBar.innerText = `[STT]: ${msg.text}`;
-            if (msg.type === 'tts' && msg.text) {
-              this.appendMessage(msg.text, 'ai');
-              this.speakLocalText(msg.text);
+            if (msg.type === 'stt' && msg.text && this.currentMsgBar) {
+              this.currentMsgBar.innerText = `[STT]: ${msg.text}`;
+            }
+            if (msg.type === 'llm' && msg.text && msg.text !== '😊' && msg.text !== '🤔') {
+              this.wsResponseReceived = true;
+              this.appendOrUpdateAiResponse(msg.text);
+            }
+            if (msg.type === 'tts' && msg.text && (msg.state === 'sentence_start' || msg.state === 'start' || !msg.state)) {
+              this.wsResponseReceived = true;
+              this.appendOrUpdateAiResponse(msg.text);
+            }
+            if (this.otaLogBox) {
+              this.otaLogBox.value = `[${new Date().toLocaleTimeString()}] WS RECV: ${event.data}\n` + (this.otaLogBox.value || '');
             }
           } catch (e) {}
         }

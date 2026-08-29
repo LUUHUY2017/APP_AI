@@ -324,22 +324,17 @@ public partial class MainPage : ContentPage
         // Check for iOS App Launcher voice commands
         if (await TryOpenAppByVoiceCommandAsync(text)) return;
 
-        // Cho phép Server 8 giây để phản hồi trước khi dùng fallback
+        // Nếu đã kết nối Server Xiaozhi, nhường 100% quyền trả lời cho Server (Model, Prompt & Voice cài trên xiaozhi.me)
+        if (_client.IsConnected) return;
+
+        // Nếu ngắt kết nối, dùng fallback dự phòng
         _ = Task.Run(async () =>
         {
-            await Task.Delay(8000);
+            await Task.Delay(5000);
             if (!_receivedResponse)
             {
                 _receivedResponse = true;
-                string reply = $"Dạ BACKEND AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn. Mình sẵn sàng hỗ trợ !";
-                if (text.ToLower().Contains("chào") || text.ToLower().Contains("hello"))
-                {
-                    reply = "Xin chào! Em là BACKEND AI. Em có thể giúp gì cho bạn hôm nay?";
-                }
-                else if (text.ToLower().Contains("ôm") || text.ToLower().Contains("thương"))
-                {
-                    reply = "Gửi bạn một cái ôm thật ấm áp! BACKEND AI luôn ở đây để lắng nghe và đồng hành cùng bạn nhé! ❤️";
-                }
+                string reply = $"Dạ AI đây! Mình đã nhận được câu hỏi \"{text}\" từ bạn.";
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
@@ -658,7 +653,7 @@ public partial class MainPage : ContentPage
                 await TextToSpeech.Default.SpeakAsync(textToSpeak, new SpeechOptions
                 {
                     Volume = _currentVolume,
-                    Pitch = 1.0f
+                    Pitch = 0.75f // Hạ tông Pitch xuống 0.75f tạo giọng Nam trầm ấm
                 });
             }
             catch (Exception ex)
