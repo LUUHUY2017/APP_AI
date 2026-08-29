@@ -38,6 +38,12 @@ public partial class MainPage : ContentPage
             Preferences.Default.Set("lily_client_id", clientId);
         }
 
+        XiaozhiWebSocketClient.OnRawLog += (logMsg) =>
+        {
+            _debugLogs.Enqueue(logMsg);
+            while (_debugLogs.Count > 120) _debugLogs.TryDequeue(out _);
+        };
+
         _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
         SetupClientHandlers();
         _ = ConnectWithOtaAsync();
@@ -45,6 +51,8 @@ public partial class MainPage : ContentPage
         // Auto-Scroll chat content above keyboard when typing
         TextInput.Focused += (s, e) => ScrollToBottom(350);
     }
+
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _debugLogs = new();
 
     private string _lastSentText = string.Empty;
 
@@ -219,6 +227,47 @@ public partial class MainPage : ContentPage
         {
             await StopRecordingAndProcessAsync();
         }
+    }
+
+    private async void OnDebugLogClicked(object sender, EventArgs e)
+    {
+        var logs = string.Join("\n", _debugLogs.ToArray());
+        if (string.IsNullOrWhiteSpace(logs)) logs = "Chưa có nhật ký kết nối WebSocket nào.";
+
+        var editor = new Editor
+        {
+            Text = logs,
+            IsReadOnly = true,
+            TextColor = Color.FromArgb("#00f2fe"),
+            BackgroundColor = Color.FromArgb("#16122c"),
+            FontSize = 11,
+            HeightRequest = 480
+        };
+
+        var page = new ContentPage
+        {
+            Title = "🐞 Debug Log WebSocket",
+            BackgroundColor = Color.FromArgb("#0a0814"),
+            Content = new VerticalStackLayout
+            {
+                Padding = new Thickness(14),
+                Spacing = 10,
+                Children =
+                {
+                    new Label { Text = "🐞 Nhật ký Giao tiếp WebSocket Real-time (iOS)", TextColor = Colors.White, FontAttributes = FontAttributes.Bold, FontSize = 15 },
+                    editor,
+                    new Button
+                    {
+                        Text = "Đóng Nhật ký",
+                        BackgroundColor = Color.FromArgb("#6c47ff"),
+                        TextColor = Colors.White,
+                        Command = new Command(async () => await Navigation.PopModalAsync())
+                    }
+                }
+            }
+        };
+
+        await Navigation.PushModalAsync(new NavigationPage(page));
     }
 
     private async void OnRefreshClicked(object sender, EventArgs e)

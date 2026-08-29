@@ -42,15 +42,19 @@ public class XiaozhiWebSocketClient : IProtocol
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "XiaozhiLily", "ws_traffic.log");
 
+    public static event Action<string>? OnRawLog;
+
     /// <summary>Ghi log chẩn đoán ra Debug và file tạm mà không làm gián đoạn luồng chính.</summary>
     public static void Log(string msg)
     {
+        var formatted = $"[{DateTime.Now:HH:mm:ss.fff}] {msg}";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogFile)!);
-            File.AppendAllText(LogFile, $"[{DateTime.Now:HH:mm:ss.fff}] {msg}\n");
+            File.AppendAllText(LogFile, $"{formatted}\n");
         }
         catch { }
+        try { OnRawLog?.Invoke(formatted); } catch { }
     }
 
     public string? SessionId => _sessionId;

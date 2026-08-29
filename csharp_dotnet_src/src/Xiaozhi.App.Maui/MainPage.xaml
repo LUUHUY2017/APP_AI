@@ -29,6 +29,9 @@
                         TextColor="#dcd8fc" FontSize="11" FontAttributes="Bold"
                         HeightRequest="36" Padding="10,0" CornerRadius="18" BorderColor="#3b3370"
                         Clicked="OnHandsFreeClicked" />
+                <Button Text="🐞" BackgroundColor="#1e1838" TextColor="#dcd8fc"
+                        FontSize="15" WidthRequest="36" HeightRequest="36" CornerRadius="10" BorderColor="#3b3370"
+                        Padding="0" Clicked="OnDebugLogClicked" />
                 <Button Text="🔄" BackgroundColor="#1e1838" TextColor="#dcd8fc"
                         FontSize="15" WidthRequest="36" HeightRequest="36" CornerRadius="10" BorderColor="#3b3370"
                         Padding="0" Clicked="OnRefreshClicked" />
