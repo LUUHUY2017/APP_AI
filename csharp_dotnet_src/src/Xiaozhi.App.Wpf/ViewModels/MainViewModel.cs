@@ -17,6 +17,7 @@ namespace Xiaozhi.App.Wpf.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {
+    // Các dịch vụ dài hạn của một phiên chạy: mạng, codec, micro/loa, VAD và chuyển văn bản thành audio.
     private XiaozhiWebSocketClient? _protocolClient;
     private readonly NAudioAudioService _audioService;
     private readonly OpusCodec _opusCodec;
@@ -76,6 +77,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public MainViewModel()
     {
+        // Dữ liệu PCM từ micro được đẩy ngay sang pipeline VAD -> Opus -> WebSocket.
         _opusCodec = new OpusCodec();
         _audioService = new NAudioAudioService();
         _audioService.OnAudioRecorded += OnAudioCaptured;
@@ -127,6 +129,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private async void OnAudioCaptured(byte[] pcmBytes)
     {
+        // Mỗi buffer PCM 16 kHz mono vừa phục vụ VAD cục bộ, vừa được nén Opus để giảm băng thông.
         if (!_isListening || _protocolClient?.IsConnected != true) return;
         try
         {
@@ -148,6 +151,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task<bool> EnsureConnectedAsync()
     {
+        // Tái sử dụng phiên còn sống; tránh tạo nhiều WebSocket khi người dùng bấm liên tục.
         if (_protocolClient != null && _protocolClient.IsConnected)
         {
             IsConnected = true;
@@ -163,6 +167,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         try
         {
+            // OTA discovery trả về endpoint và token WebSocket hiện hành cho thiết bị.
             var otaPayload = new
             {
                 application = new { version = "1.7.2" },
@@ -221,6 +226,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task ReconnectAsync()
     {
+        // Hủy lần kết nối đang chờ, bỏ client cũ và dựng lại toàn bộ phiên từ cấu hình hiện tại.
         _connectCts?.Cancel();
         _protocolClient = null;
         IsConnected = false;
@@ -229,10 +235,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void WireEvents()
     {
+        // Chuyển các gói/sự kiện mức giao thức thành trạng thái mà giao diện có thể hiển thị.
         if (_protocolClient == null) return;
 
         _protocolClient.OnIncomingAudio += async (opusData) =>
         {
+            // Server gửi TTS dạng Opus 24 kHz; giải mã về PCM rồi đưa vào bộ đệm loa.
             try
             {
                 var pcmShorts = _opusCodec.Decode24k(opusData);
@@ -262,6 +270,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         _protocolClient.OnSttReceived += async (sttText) =>
         {
+            // STT là câu server nhận dạng được từ audio của người dùng.
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 _requestTimeoutTimer?.Stop();
@@ -285,6 +294,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         _protocolClient.OnLlmResponse += async (text, emotion) =>
         {
+            // Phần chữ của câu trả lời được hiển thị ngay, độc lập với audio TTS đến sau.
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 _requestTimeoutTimer?.Stop();
@@ -304,6 +314,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         _protocolClient.OnTtsStateChanged += async (state) =>
         {
+            // TTS start/stop điều khiển avatar, trạng thái và việc dừng bộ đệm phát.
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
                 _requestTimeoutTimer?.Stop();
@@ -350,6 +361,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task StartListeningAsync()
     {
+        // Thứ tự quan trọng: bảo đảm mạng -> reset VAD -> báo server -> mở micro.
         if (!await EnsureConnectedAsync()) return;
 
         _vad.Reset();
@@ -367,6 +379,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task StopListeningAsync()
     {
+        // Đóng micro trước, sau đó báo server kết thúc câu để kích hoạt STT/LLM/TTS.
         if (!_isListening) return;
         _isListening = false;
         _audioService.StopRecording();
@@ -383,6 +396,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task SendTextMessageAsync(string text)
     {
+        // Câu ngắn dùng truy vấn text trực tiếp; câu dài được stream như audio để tương thích server.
         if (string.IsNullOrWhiteSpace(text)) return;
         if (!await EnsureConnectedAsync()) return;
 
@@ -416,6 +430,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task AbortAsync()
     {
+        // Dừng phát cục bộ ngay rồi gửi abort để server ngừng phần trả lời còn lại.
         _audioService.StopPlayback();
         _ttsResetTimer?.Stop();
         _requestTimeoutTimer?.Stop();

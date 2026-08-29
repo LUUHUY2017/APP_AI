@@ -2,8 +2,9 @@
   "profiles": {
     "Xiaozhi.App.Wpf": {
       "commandName": "Project",
-      "sqlDebugging": true,
-      "jsWebView2Debugging": true
+      "sqlDebugging": false,
+      "jsWebView2Debugging": false,
+      "hotReloadEnabled": true
     },
     "Profile 1": {
       "commandName": "Project"

@@ -7,6 +7,7 @@ namespace Xiaozhi.Plugins;
 
 public class GlobalShortcutPlugin : IPlugin
 {
+    // Plugin ánh xạ Ctrl+J/K/Q thành sự kiện trung lập; cửa sổ quyết định nghiệp vụ cụ thể.
     public string Name => "GlobalShortcutPlugin";
 
     public event Action? OnManualTalkTriggered;
@@ -34,6 +35,7 @@ public class GlobalShortcutPlugin : IPlugin
 
     public void RegisterWindow(IntPtr hWnd)
     {
+        // Gắn hook vào message loop của cửa sổ để nhận WM_HOTKEY từ Windows.
         _hWnd = hWnd;
         _hwndSource = HwndSource.FromHwnd(hWnd);
         _hwndSource?.AddHook(HwndHook);
@@ -45,6 +47,7 @@ public class GlobalShortcutPlugin : IPlugin
 
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        // wParam chứa ID đã đăng ký, không phải mã phím trực tiếp.
         if (msg == WM_HOTKEY)
         {
             int id = wParam.ToInt32();
@@ -74,6 +77,7 @@ public class GlobalShortcutPlugin : IPlugin
 
     public Task ShutdownAsync()
     {
+        // Bắt buộc unregister và tháo hook để không giữ tài nguyên native sau khi đóng app.
         if (_hWnd != IntPtr.Zero)
         {
             UnregisterHotKey(_hWnd, HOTKEY_ID_J);

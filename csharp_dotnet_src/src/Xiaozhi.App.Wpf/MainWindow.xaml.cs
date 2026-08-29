@@ -15,6 +15,7 @@ namespace Xiaozhi.App.Wpf;
 
 public partial class MainWindow : Window
 {
+    // ViewModel giữ toàn bộ trạng thái/nghiệp vụ; code-behind này chỉ điều phối sự kiện và cập nhật giao diện.
     private readonly MainViewModel _vm;
     private bool _isRecordingActive = false;
     private Stopwatch _pressTimer = new();
@@ -22,12 +23,14 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        // Nạp cây điều khiển từ MainWindow.xaml rồi lấy ViewModel đã khai báo trong DataContext.
         InitializeComponent();
         _vm = (MainViewModel)DataContext;
         _vm.PropertyChanged += Vm_PropertyChanged;
         _vm.MessageAdded += OnMessageAdded;
         Loaded += async (s, e) =>
         {
+            // Hotkey của Windows cần HWND thật, vì vậy chỉ đăng ký sau khi cửa sổ đã Loaded.
             var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             _shortcutPlugin.RegisterWindow(handle);
             _shortcutPlugin.OnManualTalkTriggered += async () =>
@@ -40,11 +43,13 @@ public partial class MainWindow : Window
 
             await _vm.InitializeAsync();
         };
+        // Nhả các hotkey toàn cục khi cửa sổ đóng để ứng dụng khác có thể sử dụng lại.
         Unloaded += (s, e) => _ = _shortcutPlugin.ShutdownAsync();
     }
 
     private void Vm_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        // Callback mạng/audio có thể chạy ở luồng nền; Dispatcher đưa mọi thay đổi về UI thread.
         Dispatcher.Invoke(() =>
         {
             switch (e.PropertyName)
@@ -76,6 +81,7 @@ public partial class MainWindow : Window
 
     private void UpdateHandsFreeUI(bool enabled)
     {
+        // Đồng bộ nhãn và màu nút với trạng thái HandsFreeMode trong ViewModel.
         var label = (TextBlock?)HandsFreeBtn.Template.FindName("HandsFreeLabel", HandsFreeBtn);
         if (label != null)
         {
@@ -88,6 +94,7 @@ public partial class MainWindow : Window
 
     private void UpdateRecordingUI(bool recording)
     {
+        // Đổi nút micro và chạy/tắt vòng sáng nhấp nháy để phản hồi trạng thái thu âm.
         _isRecordingActive = recording;
         if (recording)
         {
@@ -116,6 +123,7 @@ public partial class MainWindow : Window
 
     private void OnMessageAdded(ChatMessage msg)
     {
+        // Tạo bong bóng chat động: AI nằm trái, người dùng nằm phải.
         Dispatcher.Invoke(() =>
         {
             var isAi = msg.Role == "assistant";
@@ -163,6 +171,7 @@ public partial class MainWindow : Window
 
     private async void TalkBtn_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        // Một lần bấm sẽ bật/tắt micro; Stopwatch còn hỗ trợ thao tác nhấn giữ.
         _pressTimer.Restart();
 
         if (!_isRecordingActive)
@@ -178,6 +187,7 @@ public partial class MainWindow : Window
 
     private void TalkBtn_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        // Nhấn giữ quá 600 ms có nghĩa là dừng thu khi người dùng thả chuột.
         _pressTimer.Stop();
         if (_pressTimer.ElapsedMilliseconds > 600 && _isRecordingActive)
         {
@@ -222,6 +232,7 @@ public partial class MainWindow : Window
 
     private void SendCurrentText()
     {
+        // Chuẩn hóa đầu vào, xóa ô nhập ngay và giao việc gửi bất đồng bộ cho ViewModel.
         var text = TxtInput.Text?.Trim();
         if (!string.IsNullOrEmpty(text))
         {
@@ -237,6 +248,7 @@ public partial class MainWindow : Window
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
     {
+        // Chỉ kết nối lại khi hộp thoại trả về true, tức cấu hình mới đã được lưu.
         var win = new SettingsWindow();
         win.Owner = this;
         if (win.ShowDialog() == true)
@@ -247,6 +259,7 @@ public partial class MainWindow : Window
 
     private async void RefreshSync_Click(object sender, RoutedEventArgs e)
     {
+        // Reconnect chạy lại cả bước OTA discovery nên cũng đồng bộ URL/token mới từ server.
         StatusLabel.Text = "🔄 Đang đồng bộ...";
         CurrentMsgLabel.Text = "⏳ Đang kéo cấu hình mới nhất từ web xiaozhi.me...";
         await _vm.ReconnectAsync();
@@ -256,6 +269,7 @@ public partial class MainWindow : Window
     private bool _isIPhoneMode = false;
     private void SimulateIPhone_Click(object sender, RoutedEventArgs e)
     {
+        // Đây chỉ là chế độ mô phỏng kích thước/khung iPhone, không thay đổi nền tảng chạy.
         _isIPhoneMode = !_isIPhoneMode;
         if (_isIPhoneMode)
         {
@@ -280,6 +294,7 @@ public partial class MainWindow : Window
 
     private async void HandsFree_Click(object sender, RoutedEventArgs e)
     {
+        // Hands-free tạo vòng lặp: nghe -> server trả lời -> timer TTS bật nghe lại.
         _vm.HandsFreeMode = !_vm.HandsFreeMode;
         if (_vm.HandsFreeMode)
         {

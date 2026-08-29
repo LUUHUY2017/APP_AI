@@ -9,6 +9,7 @@ namespace Xiaozhi.Audio.Services;
 
 public class NAudioAudioService : IAudioService
 {
+    // Thu và phát là hai pipeline độc lập: IWaveIn cho micro, BufferedWaveProvider cho loa.
     private IWaveIn? _waveIn;
     private WaveOutEvent? _waveOut;
     private BufferedWaveProvider? _bufferedWaveProvider;
@@ -115,6 +116,7 @@ public class NAudioAudioService : IAudioService
 
     private byte[] ResampleToPcm16k(byte[] inBuffer, int bytesRecorded, WaveFormat inFormat, WaveFormat targetFormat)
     {
+        // WASAPI thường trả định dạng thiết bị (hay float/stereo/48 kHz); server cần PCM16 mono 16 kHz.
         try
         {
             if (inFormat.SampleRate == targetFormat.SampleRate &&
@@ -157,6 +159,7 @@ public class NAudioAudioService : IAudioService
 
     public void StopRecording()
     {
+        // Dispose thiết bị để Windows nhả micro và lần thu sau có thể khởi tạo sạch.
         if (!IsRecording || _waveIn == null) return;
         try
         {
@@ -173,6 +176,7 @@ public class NAudioAudioService : IAudioService
 
     public void PlayAudio(byte[] pcmData)
     {
+        // Chỉ thêm dữ liệu vào buffer; WaveOutEvent đã chạy nền và tự lấy mẫu để phát.
         if (_bufferedWaveProvider != null && pcmData.Length > 0)
         {
             _bufferedWaveProvider.AddSamples(pcmData, 0, pcmData.Length);

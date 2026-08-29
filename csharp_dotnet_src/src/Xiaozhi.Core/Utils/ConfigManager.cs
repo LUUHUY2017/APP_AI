@@ -8,6 +8,7 @@ namespace Xiaozhi.Core.Utils;
 
 public class ConfigManager
 {
+    // Singleton bảo đảm mọi module đọc/ghi cùng một ảnh cấu hình trong bộ nhớ.
     private static ConfigManager? _instance;
     public static ConfigManager Instance => _instance ??= new ConfigManager();
 
@@ -24,12 +25,14 @@ public class ConfigManager
 
     private ConfigManager()
     {
+        // config.json chứa tùy chọn ứng dụng; efuse.json chứa danh tính/kích hoạt thiết bị.
         Config = LoadOrCreate();
         Efuse = LoadOrCreateEfuse();
     }
 
     private AppConfig LoadOrCreate()
     {
+        // Ưu tiên cấu hình người dùng trong AppData; lỗi đọc/JSON sẽ quay về mặc định an toàn.
         try
         {
             if (File.Exists(ConfigPath))
@@ -47,6 +50,7 @@ public class ConfigManager
 
     private EfuseConfig LoadOrCreateEfuse()
     {
+        // Thứ tự tìm: AppData -> file đi kèm bản build -> tự tạo fingerprint mới.
         try
         {
             if (File.Exists(EfusePath))
@@ -112,6 +116,7 @@ public class ConfigManager
 
     public void SaveConfig(AppConfig config)
     {
+        // Ghi JSON dễ đọc và cập nhật ngay đối tượng Config đang được các module sử dụng.
         try
         {
             Directory.CreateDirectory(ConfigDir);
@@ -136,6 +141,7 @@ public class ConfigManager
 
     public static string GetMacAddress()
     {
+        // Chọn card mạng đang hoạt động đầu tiên, bỏ loopback và địa chỉ toàn số 0.
         try
         {
             foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
