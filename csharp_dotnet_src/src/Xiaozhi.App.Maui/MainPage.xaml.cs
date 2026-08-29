@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
-using Xiaozhi.Audio.Services;
 using Xiaozhi.Protocols.WebSocket;
 
 namespace Xiaozhi.App.Maui;
@@ -9,7 +8,6 @@ namespace Xiaozhi.App.Maui;
 public partial class MainPage : ContentPage
 {
     private XiaozhiWebSocketClient _client;
-    private readonly TextToAudioStreamer _textStreamer;
     private bool _isRecording = false;
     private bool _handsFree = false;
     private bool _receivedResponse = false;
@@ -19,7 +17,6 @@ public partial class MainPage : ContentPage
     private string _deviceId = "38:60:77:dc:90:11";
 
     private float _currentVolume = 1.0f;
-    private readonly VoiceActivityDetector _vad = new();
 
     public MainPage()
     {
@@ -42,20 +39,6 @@ public partial class MainPage : ContentPage
         }
 
         _client = new XiaozhiWebSocketClient(_wsUrl, _token, _deviceId, clientId);
-        _textStreamer = new TextToAudioStreamer();
-
-        // Auto VAD Silence Detection (Matching WPF App)
-        _vad.OnSpeechEnded += () =>
-        {
-            if (_isRecording)
-            {
-                MainThread.BeginInvokeOnMainThread(async () =>
-                {
-                    await StopRecordingAndProcessAsync();
-                });
-            }
-        };
-
         SetupClientHandlers();
         _ = ConnectWithOtaAsync();
 
