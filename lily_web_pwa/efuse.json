@@ -1,0 +1,12 @@
+{
+  "mac_address": "38:60:77:dc:90:11",
+  "serial_number": "SN-B18EE69C-386077dc9011",
+  "hmac_key": "4a8b1dac46b2f64dfefe39ee1279ac6f6ec7f197bcbcfdf01a373d7e516a976b",
+  "activation_status": true,
+  "device_fingerprint": {
+    "system": "Windows",
+    "hostname": "KhanhPC",
+    "mac_address": "38:60:77:dc:90:11",
+    "machine_id": "b7907b41-1534-422b-a9ce-26b227286d8e"
+  }
+}

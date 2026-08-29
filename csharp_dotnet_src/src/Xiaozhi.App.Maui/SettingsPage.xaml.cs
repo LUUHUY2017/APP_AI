@@ -45,7 +45,43 @@ public partial class SettingsPage : ContentPage
 
         SerialNoLabel.Text = DeviceFingerprint.GenerateSerialNumber(savedMac);
 
+        _ = LoadEfuseJsonAssetAsync();
+
         Unloaded += (s, e) => _cts?.Cancel();
+    }
+
+    private async Task LoadEfuseJsonAssetAsync()
+    {
+        try
+        {
+            using var stream = await FileSystem.OpenAppPackageFileAsync("efuse.json");
+            using var reader = new StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("mac_address", out var macProp) && !string.IsNullOrWhiteSpace(macProp.GetString()))
+            {
+                var mac = macProp.GetString()!;
+                DeviceIdEntry.Text = mac;
+                Preferences.Default.Set("lily_device_id", mac);
+                SerialNoLabel.Text = DeviceFingerprint.GenerateSerialNumber(mac);
+            }
+
+            if (root.TryGetProperty("device_fingerprint", out var fpElem))
+            {
+                if (fpElem.TryGetProperty("machine_id", out var idProp) && !string.IsNullOrWhiteSpace(idProp.GetString()))
+                {
+                    var clientId = idProp.GetString()!;
+                    ClientIdEntry.Text = clientId;
+                    Preferences.Default.Set("lily_client_id", clientId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load efuse.json asset: {ex.Message}");
+        }
     }
 
     private async void OnGetOtpClicked(object sender, EventArgs e)

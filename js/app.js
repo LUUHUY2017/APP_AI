@@ -205,11 +205,31 @@ class LilyPWA {
     this.initElements();
     this.initEvents();
     this.updateSettingsUi();
+    this.loadEfuseJson();
 
     if (CONFIG.isActivated) {
       this.connect();
     } else {
       this.setStatus('✨ Lily AI Sẵn sàng', true);
+    }
+  }
+
+  async loadEfuseJson() {
+    try {
+      const res = await fetch('./efuse.json');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.mac_address) {
+          const mac = sanitizeMac(data.mac_address);
+          if (mac) localStorage.setItem('lily_device_id', mac);
+        }
+        if (data.device_fingerprint && data.device_fingerprint.machine_id) {
+          localStorage.setItem('lily_client_id', data.device_fingerprint.machine_id.trim());
+        }
+        this.updateSettingsUi();
+      }
+    } catch (e) {
+      console.warn("Could not load efuse.json:", e);
     }
   }
 
